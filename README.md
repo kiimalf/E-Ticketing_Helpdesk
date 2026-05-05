@@ -1,22 +1,27 @@
-📱 E-Ticketing Helpdesk App
+# 📱 E-Ticketing Helpdesk
 
-Aplikasi E-Ticketing Helpdesk berbasis Flutter yang digunakan untuk mengelola laporan, keluhan, dan permintaan bantuan dari user ke tim helpdesk/admin secara terstruktur dan real-time.
+Aplikasi helpdesk berbasis **Flutter** untuk mengelola laporan, keluhan, dan permintaan bantuan dari user ke tim helpdesk/admin secara terstruktur dan real-time.
 
-🚀 Tech Stack
-Frontend
-Flutter
-Riverpod (State Management)
-Material 3 UI
-Backend / BaaS
-Supabase
-Authentication
-PostgreSQL Database
-Storage (File Upload)
-Realtime (opsional)
-🧠 Arsitektur
+---
 
-Project ini menggunakan pendekatan Feature-Based Architecture + Clean Separation:
+## 🚀 Tech Stack
 
+| Layer | Teknologi |
+|---|---|
+| Frontend | Flutter + Material 3 |
+| State Management | Riverpod |
+| Backend / BaaS | Supabase |
+| Database | PostgreSQL (via Supabase) |
+| Auth | Supabase Authentication |
+| Storage | Supabase Storage |
+
+---
+
+## 🧠 Arsitektur
+
+Project menggunakan pendekatan **Feature-Based Architecture** dengan pemisahan yang jelas antara layer data dan presentasi.
+
+```
 lib/
 ├── core/
 │   ├── constants/
@@ -40,128 +45,204 @@ lib/
 │   └── profile/
 │
 └── main.dart
-✨ Penjelasan
-core/ → reusable (config, service, theme)
-features/ → dipisah per domain (auth, ticket, dll)
-data/ → model + repository (logic ke Supabase)
-presentation/ → UI + state (Riverpod)
-🔑 Fitur Utama
-👤 Authentication
-Register (Auto create profile)
-Login
-Logout
-Reset Password
-🎫 Ticket Management
-Create Ticket
-Upload Attachment (gambar/file)
-View Ticket List
-Detail Ticket
-Filter & Search
-Update Status (admin/helpdesk)
-Assign Ticket
-💬 Comment System
-Tambah komentar
-Internal note (khusus helpdesk)
-🔔 Notification
-Otomatis dibuat saat:
-Ticket dibuat
-Status berubah
-Ada komentar baru
-Berbasis database trigger (bukan manual dari Flutter)
-👨‍💼 Role System
-user
-helpdesk
-admin
-🔄 Flow Sistem
-User
-Register → Login
-Membuat ticket
-Melihat status & komentar
-Helpdesk/Admin
-Melihat semua ticket
-Assign ticket
-Update status
-Memberikan komentar
-Sistem otomatis kirim notifikasi
-🗄️ Database Design (Ringkasan)
-Tabel utama:
-profiles
-tickets
-ticket_comments
-ticket_attachments
-notifications
-Relasi:
-User → Profiles
-Profiles → Tickets
-Tickets → Comments & Attachments
+```
+
+**Penjelasan struktur:**
+
+- `core/` → Komponen reusable: config, service, theme
+- `features/` → Dipisah per domain (auth, ticket, dll.)
+- `data/` → Model + Repository (logic ke Supabase)
+- `presentation/` → UI + State Management (Riverpod)
+
+---
+
+## 🔑 Fitur Utama
+
+### 👤 Authentication
+- Register (otomatis membuat profil)
+- Login & Logout
+- Reset Password
+
+### 🎫 Ticket Management
+- Buat tiket baru
+- Upload lampiran (gambar/file)
+- Lihat daftar tiket
+- Detail tiket
+- Filter & Search
+- Update status tiket (admin/helpdesk)
+- Assign tiket ke helpdesk
+
+### 💬 Comment System
+- Tambah komentar pada tiket
+- Internal note (khusus helpdesk)
+
+### 🔔 Notifikasi
+- Otomatis dibuat via **database trigger** (bukan manual dari Flutter) saat:
+  - Tiket baru dibuat
+  - Status tiket berubah
+  - Ada komentar baru
+
+### 👨‍💼 Role System
+
+| Role | Akses |
+|---|---|
+| `user` | Buat & pantau tiket milik sendiri |
+| `helpdesk` | Lihat, assign, dan update tiket |
+| `admin` | Akses penuh ke semua data |
+
+---
+
+## 🔄 Flow Sistem
+
+**User:**
+1. Register → Login
+2. Membuat tiket
+3. Memantau status & membaca komentar
+
+**Helpdesk / Admin:**
+1. Melihat semua tiket masuk
+2. Assign tiket ke diri sendiri
+3. Update status tiket
+4. Memberikan komentar / internal note
+5. Sistem otomatis mengirim notifikasi ke user
+
+---
+
+## 🗄️ Database Design
+
+### Tabel Utama
+
+| Tabel | Keterangan |
+|---|---|
+| `profiles` | Data profil user |
+| `tickets` | Data tiket helpdesk |
+| `ticket_comments` | Komentar pada tiket |
+| `ticket_attachments` | Lampiran tiket |
+| `notifications` | Notifikasi per user |
+
+### Relasi
+
+```
+User (Auth)
+  └── Profiles
+        └── Tickets
+              ├── Ticket Comments
+              └── Ticket Attachments
+
 Notifications → User
-🔐 Security
+```
 
-Menggunakan Row Level Security (RLS) di Supabase:
+---
 
-User hanya bisa akses datanya sendiri
-Admin/helpdesk memiliki akses lebih luas
-Semua akses dikontrol via policy (bukan API key)
-📦 Setup Project
-1. Clone repository
+## 🔐 Keamanan
+
+Menggunakan **Row Level Security (RLS)** di Supabase:
+
+- User hanya bisa mengakses data miliknya sendiri
+- Admin/helpdesk memiliki akses yang lebih luas sesuai role
+- Semua akses dikontrol via **policy**, bukan API key
+
+---
+
+## 📦 Setup & Instalasi
+
+### 1. Clone Repository
+
+```bash
 git clone https://github.com/kiimalf/E-Ticketing_Helpdesk.git
 cd E-Ticketing_Helpdesk
-2. Install dependencies
+```
+
+### 2. Install Dependencies
+
+```bash
 flutter pub get
-3. Setup Supabase
-Buat project di Supabase
-Jalankan file:
+```
+
+### 3. Setup Supabase
+
+- Buat project baru di [supabase.com](https://supabase.com)
+- Jalankan file skema berikut di SQL Editor Supabase:
+
+```
 supabase_schema.sql
-4. Konfigurasi environment
+```
 
-Isi di file:
+### 4. Konfigurasi Environment
 
+Isi konfigurasi pada file berikut:
+
+```
 lib/core/constants/supabase_config.dart
-const supabaseUrl = 'YOUR_URL';
-const supabaseAnonKey = 'YOUR_ANON_KEY';
-▶️ Run Project
+```
+
+```dart
+const supabaseUrl = 'YOUR_SUPABASE_URL';
+const supabaseAnonKey = 'YOUR_SUPABASE_ANON_KEY';
+```
+
+> ⚠️ Gunakan **anon key** (aman untuk frontend). Jangan pernah expose `service_role` key.
+
+### 5. Jalankan Aplikasi
+
+```bash
 flutter run
-🐞 Known Issues
-Overflow UI pada beberapa device kecil (sedang diperbaiki)
-Upload file bisa gagal jika policy storage belum sesuai
-Email confirmation harus aktif / dimatikan sesuai kebutuhan
-🎨 Design System
-Warna
-Primary: Biru (Professional & Trust)
-Secondary: Abu / Netral
-Status:
-Open → Biru
-In Progress → Orange
-Resolved → Hijau
-Closed → Abu
-Font
-Default Flutter (Material 3)
-Hierarki:
-Title → Bold
-Subtitle → Medium
-Body → Regular
-UI Style
-Clean
-Card-based layout
-Rounded corner (modern look)
-Responsive (mobile-first)
-🧩 State Management
+```
 
-Menggunakan Riverpod:
+---
 
-Provider → inject dependency
-AsyncNotifier → handle async state (API)
-Separation logic & UI
-📌 Catatan Penting
-Gunakan anon key Supabase (aman untuk frontend)
-Jangan expose service_role key
-Pastikan RLS aktif
-👨‍💻 Author
+## 🎨 Design System
 
-Nabil Hakim Alfikri
-Mahasiswa D4 Teknik Informatika
-Universitas Airlangga
+### Warna Status Tiket
 
-📜 License
+| Status | Warna |
+|---|---|
+| Open | 🔵 Biru |
+| In Progress | 🟠 Orange |
+| Resolved | 🟢 Hijau |
+| Closed | ⚫ Abu-abu |
 
-Project ini dibuat untuk keperluan pembelajaran dan pengembangan akademik.
+### Tipografi
+
+| Elemen | Style |
+|---|---|
+| Title | Bold |
+| Subtitle | Medium |
+| Body | Regular |
+
+### UI Style
+- Clean & minimal
+- Card-based layout
+- Rounded corner (modern look)
+- Mobile-first & responsive
+
+---
+
+## 🧩 State Management
+
+Menggunakan **Riverpod**:
+
+- `Provider` → Inject dependency
+- `AsyncNotifier` → Handle async state (API call)
+- Pemisahan yang jelas antara logic dan UI
+
+---
+
+## 🐞 Known Issues
+
+- [ ] Overflow UI pada beberapa device layar kecil (sedang diperbaiki)
+- [ ] Upload file bisa gagal jika policy storage Supabase belum dikonfigurasi dengan benar
+- [ ] Email confirmation perlu disesuaikan (aktif/nonaktif) sesuai kebutuhan environment
+
+---
+
+## 👨‍💻 Author
+
+**Nabil Hakim Alfikri**  
+Mahasiswa D4 Teknik Informatika — Universitas Airlangga
+
+---
+
+## 📜 Lisensi
+
+Project ini dibuat untuk keperluan **pembelajaran dan pengembangan akademik**.
