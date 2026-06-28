@@ -19,25 +19,23 @@ class NotificationRepository {
 
   // ─── Tandai satu notifikasi sebagai sudah dibaca ──────────
   Future<void> markAsRead(String notificationId) async {
-    await SupabaseService.from(SupabaseTables.notifications)
-        .update({'is_read': true})
-        .eq('id', notificationId);
+    await SupabaseService.from(
+      SupabaseTables.notifications,
+    ).update({'is_read': true}).eq('id', notificationId);
   }
 
   // ─── Tandai semua notifikasi user sebagai sudah dibaca ────
   Future<void> markAllAsRead(String userId) async {
-    await SupabaseService.from(SupabaseTables.notifications)
-        .update({'is_read': true})
-        .eq('user_id', userId)
-        .eq('is_read', false);
+    await SupabaseService.from(
+      SupabaseTables.notifications,
+    ).update({'is_read': true}).eq('user_id', userId).eq('is_read', false);
   }
 
   // ─── Hitung unread count (untuk badge) ───────────────────
   Future<int> unreadCount(String userId) async {
-    final data = await SupabaseService.from(SupabaseTables.notifications)
-        .select('id')
-        .eq('user_id', userId)
-        .eq('is_read', false);
+    final data = await SupabaseService.from(
+      SupabaseTables.notifications,
+    ).select('id').eq('user_id', userId).eq('is_read', false);
     return (data as List).length;
   }
 }

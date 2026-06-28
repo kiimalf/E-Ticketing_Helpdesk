@@ -28,13 +28,15 @@ class TicketRepository {
 
   // ─── Fetch daftar tiket ───────────────────────────────────
   Future<List<TicketModel>> fetchTickets({
-    TicketStatus?   status,
+    TicketStatus? status,
     TicketPriority? priority,
-    String?         search,
-    String?         createdById, // null = semua (untuk helpdesk/admin)
+    String? search,
+    String? createdById, // null = semua (untuk helpdesk/admin)
+    String? assignedToId, // untuk filter admin
   }) async {
-    var query = SupabaseService.from(SupabaseTables.tickets)
-        .select(_selectWithJoins);
+    var query = SupabaseService.from(
+      SupabaseTables.tickets,
+    ).select(_selectWithJoins);
 
     // Filter status
     if (status != null) {
@@ -48,10 +50,13 @@ class TicketRepository {
     if (createdById != null) {
       query = query.eq('created_by', createdById);
     }
+    // Filter by assigned to (untuk admin)
+    if (assignedToId != null) {
+      query = query.eq('assigned_to', assignedToId);
+    }
     // Pencarian teks
     if (search != null && search.isNotEmpty) {
-      query = query.or(
-          'title.ilike.%$search%,ticket_number.ilike.%$search%');
+      query = query.or('title.ilike.%$search%,ticket_number.ilike.%$search%');
     }
 
     final data = await query.order('created_at', ascending: false);
@@ -62,10 +67,9 @@ class TicketRepository {
 
   // ─── Fetch satu tiket by ID ───────────────────────────────
   Future<TicketModel> fetchTicketById(String id) async {
-    final data = await SupabaseService.from(SupabaseTables.tickets)
-        .select(_selectWithJoins)
-        .eq('id', id)
-        .single();
+    final data = await SupabaseService.from(
+      SupabaseTables.tickets,
+    ).select(_selectWithJoins).eq('id', id).single();
 
     return TicketModel.fromMap(data);
   }
@@ -82,12 +86,12 @@ class TicketRepository {
     // 1. Insert tiket
     final result = await SupabaseService.from(SupabaseTables.tickets)
         .insert({
-          'title':       title,
+          'title': title,
           'description': description,
-          'status':      TicketStatus.open.dbValue,
-          'priority':    priority.name,
-          'category':    category,
-          'created_by':  createdById,
+          'status': TicketStatus.open.dbValue,
+          'priority': priority.name,
+          'category': category,
+          'created_by': createdById,
         })
         .select()
         .single();
@@ -97,8 +101,8 @@ class TicketRepository {
     // 2. Upload lampiran (jika ada)
     for (final file in attachments) {
       await uploadAttachment(
-        ticketId:   ticketId,
-        file:       file,
+        ticketId: ticketId,
+        file: file,
         uploadedBy: createdById,
       );
     }
@@ -110,7 +114,7 @@ class TicketRepository {
   // ─── Update status tiket ──────────────────────────────────
   Future<void> updateStatus(String ticketId, TicketStatus newStatus) async {
     final updates = <String, dynamic>{
-      'status':     newStatus.dbValue,
+      'status': newStatus.dbValue,
       'updated_at': DateTime.now().toIso8601String(),
     };
 
@@ -118,18 +122,20 @@ class TicketRepository {
       updates['resolved_at'] = DateTime.now().toIso8601String();
     }
 
-    await SupabaseService.from(SupabaseTables.tickets)
-        .update(updates)
-        .eq('id', ticketId);
+    await SupabaseService.from(
+      SupabaseTables.tickets,
+    ).update(updates).eq('id', ticketId);
   }
 
   // ─── Assign tiket ke staff ────────────────────────────────
   Future<void> assignTicket(String ticketId, String assigneeId) async {
-    await SupabaseService.from(SupabaseTables.tickets).update({
-      'assigned_to': assigneeId,
-      'status':      TicketStatus.inProgress.dbValue,
-      'updated_at':  DateTime.now().toIso8601String(),
-    }).eq('id', ticketId);
+    await SupabaseService.from(SupabaseTables.tickets)
+        .update({
+          'assigned_to': assigneeId,
+          'status': TicketStatus.inProgress.dbValue,
+          'updated_at': DateTime.now().toIso8601String(),
+        })
+        .eq('id', ticketId);
   }
 
   // ─── Tambah komentar ──────────────────────────────────────
@@ -141,9 +147,9 @@ class TicketRepository {
   }) async {
     final data = await SupabaseService.from(SupabaseTables.comments)
         .insert({
-          'ticket_id':   ticketId,
-          'author_id':   authorId,
-          'content':     content,
+          'ticket_id': ticketId,
+          'author_id': authorId,
+          'content': content,
           'is_internal': isInternal,
         })
         .select('''
@@ -153,9 +159,9 @@ class TicketRepository {
         .single();
 
     // Bump updated_at tiket
-    await SupabaseService.from(SupabaseTables.tickets).update({
-      'updated_at': DateTime.now().toIso8601String(),
-    }).eq('id', ticketId);
+    await SupabaseService.from(SupabaseTables.tickets)
+        .update({'updated_at': DateTime.now().toIso8601String()})
+        .eq('id', ticketId);
 
     return TicketCommentModel.fromMap(data);
   }
@@ -166,16 +172,19 @@ class TicketRepository {
     required File file,
     required String uploadedBy,
   }) async {
-    final ext         = p.extension(file.path).toLowerCase();
+    final ext = p.extension(file.path).toLowerCase();
     final storagePath = 'tickets/$ticketId/${_uuid.v4()}$ext';
 
     // Upload ke bucket
-    await SupabaseService.bucket(SupabaseBuckets.ticketAttachments)
-        .upload(storagePath, file);
+    await SupabaseService.bucket(
+      SupabaseBuckets.ticketAttachments,
+    ).upload(storagePath, file);
 
     // Dapatkan public URL
     final fileUrl = SupabaseService.getPublicUrl(
-        SupabaseBuckets.ticketAttachments, storagePath);
+      SupabaseBuckets.ticketAttachments,
+      storagePath,
+    );
 
     final isImage = ['.jpg', '.jpeg', '.png', '.gif', '.webp'].contains(ext);
     final fileSize = await file.length();
@@ -183,11 +192,11 @@ class TicketRepository {
     // Simpan metadata attachment
     final data = await SupabaseService.from(SupabaseTables.attachments)
         .insert({
-          'ticket_id':   ticketId,
-          'file_name':   p.basename(file.path),
-          'file_url':    fileUrl,
-          'file_type':   isImage ? 'image' : 'file',
-          'file_size':   fileSize,
+          'ticket_id': ticketId,
+          'file_name': p.basename(file.path),
+          'file_url': fileUrl,
+          'file_type': isImage ? 'image' : 'file',
+          'file_size': fileSize,
           'uploaded_by': uploadedBy,
         })
         .select()

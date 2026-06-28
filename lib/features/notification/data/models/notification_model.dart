@@ -23,27 +23,27 @@ class NotificationModel {
 
   factory NotificationModel.fromMap(Map<String, dynamic> map) {
     return NotificationModel(
-      id:        map['id']        as String,
-      userId:    map['user_id']   as String,
-      title:     map['title']     as String,
-      body:      map['body']      as String,
-      ticketId:  map['ticket_id'] as String?,
-      isRead:    (map['is_read']  as bool?) ?? false,
-      type:      NotificationTypeX.fromString(map['type'] as String?),
+      id: map['id'] as String,
+      userId: map['user_id'] as String,
+      title: map['title'] as String,
+      body: map['body'] as String,
+      ticketId: map['ticket_id'] as String?,
+      isRead: (map['is_read'] as bool?) ?? false,
+      type: NotificationTypeX.fromString(map['type'] as String?),
       createdAt: DateTime.parse(map['created_at'] as String),
     );
   }
 
   NotificationModel copyWith({bool? isRead}) => NotificationModel(
-        id:        id,
-        userId:    userId,
-        title:     title,
-        body:      body,
-        ticketId:  ticketId,
-        isRead:    isRead ?? this.isRead,
-        type:      type,
-        createdAt: createdAt,
-      );
+    id: id,
+    userId: userId,
+    title: title,
+    body: body,
+    ticketId: ticketId,
+    isRead: isRead ?? this.isRead,
+    type: type,
+    createdAt: createdAt,
+  );
 
   @override
   bool operator ==(Object other) =>

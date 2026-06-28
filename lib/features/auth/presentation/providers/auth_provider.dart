@@ -11,37 +11,41 @@ final sharedPrefsProvider = Provider<SharedPreferences>((ref) {
 });
 
 // ─── Theme Provider ───────────────────────────────────────────
-final themeProvider = StateNotifierProvider<ThemeNotifier, bool>((ref) {
-  final prefs = ref.watch(sharedPrefsProvider);
-  return ThemeNotifier(prefs);
-});
+final themeProvider = NotifierProvider<ThemeNotifier, bool>(ThemeNotifier.new);
 
-class ThemeNotifier extends StateNotifier<bool> {
-  ThemeNotifier(this._prefs)
-      : super(_prefs.getBool(PrefKeys.isDark) ?? false);
-
-  final SharedPreferences _prefs;
+class ThemeNotifier extends Notifier<bool> {
+  @override
+  bool build() =>
+      ref.watch(sharedPrefsProvider).getBool(PrefKeys.isDark) ?? false;
 
   Future<void> toggle() async {
     state = !state;
-    await _prefs.setBool(PrefKeys.isDark, state);
+    await ref.read(sharedPrefsProvider).setBool(PrefKeys.isDark, state);
   }
 }
 
 // ─── Auth Sign-Up Phase State ─────────────────────────────────
 enum SignUpPhase {
   idle,
-  creatingAccount,  // sedang panggil auth.signUp()
-  waitingProfile,   // menunggu trigger & polling profiles
+  creatingAccount, // sedang panggil auth.signUp()
+  waitingProfile, // menunggu trigger & polling profiles
 }
 
-final signUpPhaseProvider = StateProvider<SignUpPhase>((ref) {
-  return SignUpPhase.idle;
-});
+final signUpPhaseProvider = NotifierProvider<SignUpPhaseNotifier, SignUpPhase>(
+  SignUpPhaseNotifier.new,
+);
+
+class SignUpPhaseNotifier extends Notifier<SignUpPhase> {
+  @override
+  SignUpPhase build() => SignUpPhase.idle;
+
+  void setPhase(SignUpPhase phase) => state = phase;
+}
 
 // ─── Auth Provider ─────────────────────────────────────────────
-final authProvider =
-    AsyncNotifierProvider<AuthNotifier, UserModel?>(AuthNotifier.new);
+final authProvider = AsyncNotifierProvider<AuthNotifier, UserModel?>(
+  AuthNotifier.new,
+);
 
 class AuthNotifier extends AsyncNotifier<UserModel?> {
   AuthRepository get _repo => ref.read(authRepositoryProvider);
@@ -57,10 +61,7 @@ class AuthNotifier extends AsyncNotifier<UserModel?> {
   }
 
   // ─── Sign In ─────────────────────────────────────────────────
-  Future<void> signIn({
-    required String email,
-    required String password,
-  }) async {
+  Future<void> signIn({required String email, required String password}) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(
       () => _repo
@@ -78,29 +79,31 @@ class AuthNotifier extends AsyncNotifier<UserModel?> {
   }) async {
     state = const AsyncLoading();
 
-    ref.read(signUpPhaseProvider.notifier).state =
-        SignUpPhase.creatingAccount;
+    ref
+        .read(signUpPhaseProvider.notifier)
+        .setPhase(SignUpPhase.creatingAccount);
 
     Future.delayed(const Duration(milliseconds: 400), () {
       if (state.isLoading) {
-        ref.read(signUpPhaseProvider.notifier).state =
-            SignUpPhase.waitingProfile;
+        ref
+            .read(signUpPhaseProvider.notifier)
+            .setPhase(SignUpPhase.waitingProfile);
       }
     });
 
     state = await AsyncValue.guard(
       () => _repo
           .signUp(
-            name:       name,
-            email:      email,
-            password:   password,
+            name: name,
+            email: email,
+            password: password,
             department: department,
           )
           .then((u) => u as UserModel?),
     );
 
     // Reset fase setelah selesai (sukses atau error)
-    ref.read(signUpPhaseProvider.notifier).state = SignUpPhase.idle;
+    ref.read(signUpPhaseProvider.notifier).setPhase(SignUpPhase.idle);
   }
 
   // ─── Sign Out ─────────────────────────────────────────────────
@@ -122,9 +125,9 @@ class AuthNotifier extends AsyncNotifier<UserModel?> {
   }
 
   // ─── Helpers ─────────────────────────────────────────────────
-  UserModel? get currentUser    => state.valueOrNull;
-  bool       get isAuthenticated => state.valueOrNull != null;
-  bool       get isLoading       => state.isLoading;
+  UserModel? get currentUser => state.value;
+  bool get isAuthenticated => state.value != null;
+  bool get isLoading => state.isLoading;
 
   /// Jika error adalah AppException.isInfo → true (bukan error merah)
   bool get isInfoMessage {

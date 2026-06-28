@@ -7,6 +7,8 @@ import 'package:eticketing_helpdesk/features/ticket/presentation/providers/ticke
 import 'package:eticketing_helpdesk/features/ticket/presentation/widgets/ticket_card_widget.dart';
 import 'package:eticketing_helpdesk/features/ticket/presentation/pages/ticket_detail_page.dart';
 import 'package:eticketing_helpdesk/features/ticket/presentation/pages/create_ticket_page.dart';
+import 'package:eticketing_helpdesk/features/user/presentation/providers/user_provider.dart';
+import 'package:eticketing_helpdesk/features/auth/presentation/providers/auth_provider.dart';
 
 class TicketListPage extends ConsumerStatefulWidget {
   const TicketListPage({super.key});
@@ -26,14 +28,19 @@ class _TicketListPageState extends ConsumerState<TicketListPage> {
 
   void _showFilterSheet() {
     final current = ref.read(ticketFilterProvider);
-    TicketStatus?   tempStatus   = current.status;
+    TicketStatus? tempStatus = current.status;
     TicketPriority? tempPriority = current.priority;
+    String? tempAssignedTo = current.assignedToId;
+
+    final authState = ref.read(authProvider);
+    final isAdmin = authState.value?.role == UserRole.admin;
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setModal) => Padding(
           padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
@@ -44,17 +51,21 @@ class _TicketListPageState extends ConsumerState<TicketListPage> {
               // Handle bar
               Center(
                 child: Container(
-                  width: 40, height: 4,
+                  width: 40,
+                  height: 4,
                   decoration: BoxDecoration(
-                      color: Colors.grey.shade300,
-                      borderRadius: BorderRadius.circular(2)),
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
               Row(
                 children: [
-                  Text('Filter Tiket',
-                      style: Theme.of(context).textTheme.titleLarge),
+                  Text(
+                    'Filter Tiket',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
                   const Spacer(),
                   TextButton(
                     onPressed: () {
@@ -72,12 +83,14 @@ class _TicketListPageState extends ConsumerState<TicketListPage> {
               Wrap(
                 spacing: 8,
                 children: TicketStatus.values
-                    .map((s) => FilterChip(
-                          label: Text(s.label),
-                          selected: tempStatus == s,
-                          onSelected: (v) =>
-                              setModal(() => tempStatus = v ? s : null),
-                        ))
+                    .map(
+                      (s) => FilterChip(
+                        label: Text(s.label),
+                        selected: tempStatus == s,
+                        onSelected: (v) =>
+                            setModal(() => tempStatus = v ? s : null),
+                      ),
+                    )
                     .toList(),
               ),
               const SizedBox(height: 16),
@@ -86,20 +99,71 @@ class _TicketListPageState extends ConsumerState<TicketListPage> {
               Wrap(
                 spacing: 8,
                 children: TicketPriority.values
-                    .map((p) => FilterChip(
-                          label: Text(p.label),
-                          selected: tempPriority == p,
-                          onSelected: (v) =>
-                              setModal(() => tempPriority = v ? p : null),
-                        ))
+                    .map(
+                      (p) => FilterChip(
+                        label: Text(p.label),
+                        selected: tempPriority == p,
+                        onSelected: (v) =>
+                            setModal(() => tempPriority = v ? p : null),
+                      ),
+                    )
                     .toList(),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
+              if (isAdmin) ...[
+                Text(
+                  'Ditugaskan Kepada',
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+                const SizedBox(height: 8),
+                Consumer(
+                  builder: (context, ref, _) {
+                    final usersAsync = ref.watch(userManagementProvider);
+                    return usersAsync.maybeWhen(
+                      data: (users) {
+                        final helpdesks = users
+                            .where((u) => u.role == UserRole.helpdesk)
+                            .toList();
+                        return DropdownButtonFormField<String?>(
+                          initialValue: tempAssignedTo,
+                          decoration: const InputDecoration(
+                            border: OutlineInputBorder(),
+                            isDense: true,
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
+                          ),
+                          items: [
+                            const DropdownMenuItem(
+                              value: null,
+                              child: Text('Semua'),
+                            ),
+                            ...helpdesks.map(
+                              (h) => DropdownMenuItem(
+                                value: h.id,
+                                child: Text(h.name),
+                              ),
+                            ),
+                          ],
+                          onChanged: (v) => setModal(() => tempAssignedTo = v),
+                        );
+                      },
+                      orElse: () => const SizedBox(
+                        height: 48,
+                        child: Center(child: CircularProgressIndicator()),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 24),
+              ],
               ElevatedButton(
                 onPressed: () {
                   ref.read(ticketFilterProvider.notifier)
                     ..setStatus(tempStatus)
-                    ..setPriority(tempPriority);
+                    ..setPriority(tempPriority)
+                    ..setAssignedTo(tempAssignedTo);
                   Navigator.pop(ctx);
                 },
                 child: const Text('Terapkan Filter'),
@@ -114,7 +178,7 @@ class _TicketListPageState extends ConsumerState<TicketListPage> {
   @override
   Widget build(BuildContext context) {
     final ticketsAsync = ref.watch(ticketListProvider);
-    final filter       = ref.watch(ticketFilterProvider);
+    final filter = ref.watch(ticketFilterProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -130,8 +194,11 @@ class _TicketListPageState extends ConsumerState<TicketListPage> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => Navigator.push(context,
-            MaterialPageRoute(builder: (_) => const CreateTicketPage())),
+        heroTag: 'fab_tickets',
+        onPressed: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const CreateTicketPage()),
+        ),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         child: const Icon(Icons.add_rounded),
@@ -151,9 +218,7 @@ class _TicketListPageState extends ConsumerState<TicketListPage> {
                         icon: const Icon(Icons.clear_rounded),
                         onPressed: () {
                           _searchCtrl.clear();
-                          ref
-                              .read(ticketFilterProvider.notifier)
-                              .setSearch('');
+                          ref.read(ticketFilterProvider.notifier).setSearch('');
                         },
                       )
                     : null,
@@ -169,15 +234,20 @@ class _TicketListPageState extends ConsumerState<TicketListPage> {
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
               child: Row(
                 children: [
-                  const Icon(Icons.filter_alt_rounded,
-                      size: 16, color: AppColors.primary),
+                  const Icon(
+                    Icons.filter_alt_rounded,
+                    size: 16,
+                    color: AppColors.primary,
+                  ),
                   const SizedBox(width: 4),
                   if (filter.status != null)
                     Padding(
                       padding: const EdgeInsets.only(right: 6),
                       child: Chip(
-                        label: Text(filter.status!.label,
-                            style: const TextStyle(fontSize: 11)),
+                        label: Text(
+                          filter.status!.label,
+                          style: const TextStyle(fontSize: 11),
+                        ),
                         onDeleted: () => ref
                             .read(ticketFilterProvider.notifier)
                             .setStatus(null),
@@ -187,8 +257,10 @@ class _TicketListPageState extends ConsumerState<TicketListPage> {
                     ),
                   if (filter.priority != null)
                     Chip(
-                      label: Text(filter.priority!.label,
-                          style: const TextStyle(fontSize: 11)),
+                      label: Text(
+                        filter.priority!.label,
+                        style: const TextStyle(fontSize: 11),
+                      ),
                       onDeleted: () => ref
                           .read(ticketFilterProvider.notifier)
                           .setPriority(null),
@@ -202,8 +274,7 @@ class _TicketListPageState extends ConsumerState<TicketListPage> {
           // List
           Expanded(
             child: ticketsAsync.when(
-              loading: () =>
-                  const Center(child: CircularProgressIndicator()),
+              loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, _) => AppErrorView(
                 message: e.toString().replaceAll('Exception: ', ''),
                 onRetry: () => ref.invalidate(ticketListProvider),
@@ -220,9 +291,7 @@ class _TicketListPageState extends ConsumerState<TicketListPage> {
                       action: filter.hasFilter
                           ? OutlinedButton(
                               onPressed: () {
-                                ref
-                                    .read(ticketFilterProvider.notifier)
-                                    .clear();
+                                ref.read(ticketFilterProvider.notifier).clear();
                                 _searchCtrl.clear();
                               },
                               child: const Text('Hapus Filter'),
@@ -230,8 +299,7 @@ class _TicketListPageState extends ConsumerState<TicketListPage> {
                           : null,
                     )
                   : RefreshIndicator(
-                      onRefresh: () async =>
-                          ref.invalidate(ticketListProvider),
+                      onRefresh: () async => ref.invalidate(ticketListProvider),
                       child: ListView.builder(
                         padding: const EdgeInsets.all(16),
                         itemCount: tickets.length,
@@ -240,8 +308,8 @@ class _TicketListPageState extends ConsumerState<TicketListPage> {
                           onTap: () => Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => TicketDetailPage(
-                                  ticketId: tickets[i].id),
+                              builder: (_) =>
+                                  TicketDetailPage(ticketId: tickets[i].id),
                             ),
                           ),
                         ),

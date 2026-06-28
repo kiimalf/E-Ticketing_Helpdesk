@@ -32,7 +32,7 @@ class TicketModel {
     this.createdByName,
     this.assignedToId,
     this.assignedToName,
-    this.comments    = const [],
+    this.comments = const [],
     this.attachments = const [],
     required this.createdAt,
     required this.updatedAt,
@@ -41,32 +41,32 @@ class TicketModel {
 
   // ─── Factory: dari Map Supabase (dengan join) ─────────────
   factory TicketModel.fromMap(Map<String, dynamic> map) {
-    final creator  = map['creator']  as Map<String, dynamic>?;
+    final creator = map['creator'] as Map<String, dynamic>?;
     final assignee = map['assignee'] as Map<String, dynamic>?;
 
-    final rawComments    = map['ticket_comments']    as List<dynamic>? ?? [];
+    final rawComments = map['ticket_comments'] as List<dynamic>? ?? [];
     final rawAttachments = map['ticket_attachments'] as List<dynamic>? ?? [];
 
     return TicketModel(
-      id:             map['id']            as String,
-      ticketNumber:   map['ticket_number'] as String,
-      title:          map['title']         as String,
-      description:    map['description']   as String,
-      status:         TicketStatusX.fromString(map['status']   as String?),
-      priority:       TicketPriorityX.fromString(map['priority'] as String?),
-      category:       (map['category']    as String?) ?? 'Lainnya',
-      createdById:    map['created_by']   as String,
-      createdByName:  creator?['name']    as String?,
-      assignedToId:   map['assigned_to']  as String?,
-      assignedToName: assignee?['name']   as String?,
+      id: map['id'] as String,
+      ticketNumber: map['ticket_number'] as String,
+      title: map['title'] as String,
+      description: map['description'] as String,
+      status: TicketStatusX.fromString(map['status'] as String?),
+      priority: TicketPriorityX.fromString(map['priority'] as String?),
+      category: (map['category'] as String?) ?? 'Lainnya',
+      createdById: map['created_by'] as String,
+      createdByName: creator?['name'] as String?,
+      assignedToId: map['assigned_to'] as String?,
+      assignedToName: assignee?['name'] as String?,
       comments: rawComments
           .map((c) => TicketCommentModel.fromMap(c as Map<String, dynamic>))
           .toList(),
       attachments: rawAttachments
           .map((a) => TicketAttachmentModel.fromMap(a as Map<String, dynamic>))
           .toList(),
-      createdAt:  DateTime.parse(map['created_at'] as String),
-      updatedAt:  DateTime.parse(map['updated_at'] as String),
+      createdAt: DateTime.parse(map['created_at'] as String),
+      updatedAt: DateTime.parse(map['updated_at'] as String),
       resolvedAt: map['resolved_at'] != null
           ? DateTime.parse(map['resolved_at'] as String)
           : null,
@@ -75,41 +75,40 @@ class TicketModel {
 
   // ─── toMap untuk INSERT ───────────────────────────────────
   Map<String, dynamic> toInsertMap() => {
-        'title':       title,
-        'description': description,
-        'status':      TicketStatus.open.dbValue,
-        'priority':    priority.name,
-        'category':    category,
-        'created_by':  createdById,
-      };
+    'title': title,
+    'description': description,
+    'status': TicketStatus.open.dbValue,
+    'priority': priority.name,
+    'category': category,
+    'created_by': createdById,
+  };
 
   // ─── copyWith ─────────────────────────────────────────────
   TicketModel copyWith({
-    TicketStatus?              status,
-    String?                    assignedToId,
-    String?                    assignedToName,
-    List<TicketCommentModel>?  comments,
+    TicketStatus? status,
+    String? assignedToId,
+    String? assignedToName,
+    List<TicketCommentModel>? comments,
     List<TicketAttachmentModel>? attachments,
-    DateTime?                  resolvedAt,
-  }) =>
-      TicketModel(
-        id:             id,
-        ticketNumber:   ticketNumber,
-        title:          title,
-        description:    description,
-        status:         status         ?? this.status,
-        priority:       priority,
-        category:       category,
-        createdById:    createdById,
-        createdByName:  createdByName,
-        assignedToId:   assignedToId   ?? this.assignedToId,
-        assignedToName: assignedToName ?? this.assignedToName,
-        comments:       comments       ?? this.comments,
-        attachments:    attachments    ?? this.attachments,
-        createdAt:      createdAt,
-        updatedAt:      DateTime.now(),
-        resolvedAt:     resolvedAt     ?? this.resolvedAt,
-      );
+    DateTime? resolvedAt,
+  }) => TicketModel(
+    id: id,
+    ticketNumber: ticketNumber,
+    title: title,
+    description: description,
+    status: status ?? this.status,
+    priority: priority,
+    category: category,
+    createdById: createdById,
+    createdByName: createdByName,
+    assignedToId: assignedToId ?? this.assignedToId,
+    assignedToName: assignedToName ?? this.assignedToName,
+    comments: comments ?? this.comments,
+    attachments: attachments ?? this.attachments,
+    createdAt: createdAt,
+    updatedAt: DateTime.now(),
+    resolvedAt: resolvedAt ?? this.resolvedAt,
+  );
 
   @override
   bool operator ==(Object other) =>

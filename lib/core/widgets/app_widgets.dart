@@ -1,3 +1,4 @@
+// ignore_for_file: use_null_aware_elements
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:eticketing_helpdesk/core/constants/app_constants.dart';
@@ -13,19 +14,21 @@ class StatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (color, label) = switch (status) {
-      TicketStatus.open       => (AppColors.statusOpen,       'Open'),
+      TicketStatus.open => (AppColors.statusOpen, 'Open'),
       TicketStatus.inProgress => (AppColors.statusInProgress, 'In Progress'),
-      TicketStatus.resolved   => (AppColors.statusResolved,   'Resolved'),
-      TicketStatus.closed     => (AppColors.statusClosed,     'Closed'),
+      TicketStatus.resolved => (AppColors.statusResolved, 'Resolved'),
+      TicketStatus.closed => (AppColors.statusClosed, 'Closed'),
     };
 
     return Container(
       padding: EdgeInsets.symmetric(
-          horizontal: small ? 7 : 10, vertical: small ? 3 : 5),
+        horizontal: small ? 7 : 10,
+        vertical: small ? 3 : 5,
+      ),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.12),
+        color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.35)),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
       ),
       child: Text(
         label,
@@ -52,10 +55,19 @@ class PriorityBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (color, icon) = switch (priority) {
-      TicketPriority.low      => (AppColors.priorityLow,      Icons.arrow_downward_rounded),
-      TicketPriority.medium   => (AppColors.priorityMedium,   Icons.remove_rounded),
-      TicketPriority.high     => (AppColors.priorityHigh,     Icons.arrow_upward_rounded),
-      TicketPriority.critical => (AppColors.priorityCritical, Icons.keyboard_double_arrow_up_rounded),
+      TicketPriority.low => (
+        AppColors.priorityLow,
+        Icons.arrow_downward_rounded,
+      ),
+      TicketPriority.medium => (AppColors.priorityMedium, Icons.remove_rounded),
+      TicketPriority.high => (
+        AppColors.priorityHigh,
+        Icons.arrow_upward_rounded,
+      ),
+      TicketPriority.critical => (
+        AppColors.priorityCritical,
+        Icons.keyboard_double_arrow_up_rounded,
+      ),
     };
 
     return Row(
@@ -117,7 +129,7 @@ class StatsCard extends StatelessWidget {
                 Container(
                   padding: EdgeInsets.all(iconBoxPad),
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.12),
+                    color: color.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(icon, color: color, size: iconSize),
@@ -185,7 +197,7 @@ class AppAvatar extends StatelessWidget {
 
     return CircleAvatar(
       radius: radius,
-      backgroundColor: AppColors.primary.withOpacity(0.15),
+      backgroundColor: AppColors.primary.withValues(alpha: 0.15),
       child: Text(
         initials,
         style: TextStyle(
@@ -263,8 +275,11 @@ class AppErrorView extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline_rounded,
-                size: 48, color: Colors.red),
+            const Icon(
+              Icons.error_outline_rounded,
+              size: 48,
+              color: Colors.red,
+            ),
             const SizedBox(height: 12),
             Text(
               'Terjadi Kesalahan',
@@ -303,18 +318,18 @@ class SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Row(
-        children: [
-          Expanded(
-            child: Text(
-              title,
-              style: Theme.of(context).textTheme.titleMedium,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          if (trailing != null) trailing!,
-        ],
-      );
+    children: [
+      Expanded(
+        child: Text(
+          title,
+          style: Theme.of(context).textTheme.titleMedium,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ),
+      if (trailing != null) trailing!,
+    ],
+  );
 }
 
 // ─── Loading Button ───────────────────────────────────────────
@@ -332,25 +347,28 @@ class LoadingButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ElevatedButton(
-        onPressed: isLoading ? null : onPressed,
-        child: isLoading
-            ? const Center(
-                child: SizedBox(
-                  width: 22, height: 22,
-                  child: CircularProgressIndicator(
-                      color: Colors.white, strokeWidth: 2.5),
-                ),
-              )
-            : Text(label),
-      );
+    onPressed: isLoading ? null : onPressed,
+    child: isLoading
+        ? const Center(
+            child: SizedBox(
+              width: 22,
+              height: 22,
+              child: CircularProgressIndicator(
+                color: Colors.white,
+                strokeWidth: 2.5,
+              ),
+            ),
+          )
+        : Text(label),
+  );
 }
 
 // ─── Utility: relative time ───────────────────────────────────
 String relativeTime(DateTime d) {
   final diff = DateTime.now().difference(d);
-  if (diff.inMinutes < 1)  return 'Baru saja';
+  if (diff.inMinutes < 1) return 'Baru saja';
   if (diff.inMinutes < 60) return '${diff.inMinutes}m lalu';
-  if (diff.inHours   < 24) return '${diff.inHours}j lalu';
-  if (diff.inDays    < 7)  return '${diff.inDays}h lalu';
+  if (diff.inHours < 24) return '${diff.inHours}j lalu';
+  if (diff.inDays < 7) return '${diff.inDays}h lalu';
   return DateFormat('dd MMM yyyy').format(d);
 }

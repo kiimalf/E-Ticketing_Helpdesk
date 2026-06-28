@@ -6,12 +6,12 @@ import 'package:eticketing_helpdesk/features/auth/data/models/user_model.dart';
 
 class AuthRepository {
   // Akses auth & table melalui SupabaseService saja
-  GoTrueClient get _auth  => SupabaseService.auth;
-  String       get _table => SupabaseTables.profiles;
+  GoTrueClient get _auth => SupabaseService.auth;
+  String get _table => SupabaseTables.profiles;
 
   // ─── Konfigurasi polling ─────────────────────────────────────
-  static const int    _maxRetries       = 8;
-  static const Duration _initialDelay  = Duration(milliseconds: 300);
+  static const int _maxRetries = 8;
+  static const Duration _initialDelay = Duration(milliseconds: 300);
 
   // ─── Stream auth state ────────────────────────────────────────
   Stream<bool> get isSignedInStream =>
@@ -30,11 +30,11 @@ class AuthRepository {
       // Langkah 1: Daftarkan user ke Supabase Auth
       // department dikirim di metadata → trigger yang baca
       final res = await _auth.signUp(
-        email:    email,
+        email: email,
         password: password,
         data: {
-          'name':       name.trim(),
-          'role':       'user',
+          'name': name.trim(),
+          'role': 'user',
           // Kirim department jika ada; trigger akan NULLIF('', '') → null
           if (department != null && department.trim().isNotEmpty)
             'department': department.trim(),
@@ -53,7 +53,6 @@ class AuthRepository {
       // Langkah 2: Tunggu trigger selesai insert ke profiles
       // Trigger berjalan async di server — jangan langsung query
       return await _waitForProfile(res.user!.id);
-
     } on AuthException catch (e) {
       throw AppException(_mapAuthError(e));
     } on AppException {
@@ -72,7 +71,7 @@ class AuthRepository {
   }) async {
     try {
       final res = await _auth.signInWithPassword(
-        email:    email,
+        email: email,
         password: password,
       );
 
@@ -82,7 +81,6 @@ class AuthRepository {
 
       // fetchProfile dengan retry untuk handle cold-start / slow DB
       return await _fetchProfileWithRetry(res.user!.id);
-
     } on AuthException catch (e) {
       throw AppException(_mapAuthError(e));
     } on AppException {
@@ -147,27 +145,26 @@ class AuthRepository {
       'updated_at': DateTime.now().toIso8601String(),
     };
 
-    if (name      != null && name.trim().isNotEmpty) {
-      updates['name']       = name.trim();
+    if (name != null && name.trim().isNotEmpty) {
+      updates['name'] = name.trim();
     }
     if (avatarUrl != null) {
       updates['avatar_url'] = avatarUrl;
     }
     if (department != null) {
       // Kirim null untuk menghapus, string untuk mengisi
-      updates['department'] =
-          department.trim().isEmpty ? null : department.trim();
+      updates['department'] = department.trim().isEmpty
+          ? null
+          : department.trim();
     }
 
     // Jika tidak ada yang diubah, cukup fetch ulang
     if (updates.length == 1) return fetchProfile(userId);
 
     try {
-      final data = await SupabaseService.from(_table)
-          .update(updates)
-          .eq('id', userId)
-          .select()
-          .single();
+      final data = await SupabaseService.from(
+        _table,
+      ).update(updates).eq('id', userId).select().single();
 
       return UserModel.fromMap(data);
     } catch (e) {
@@ -195,8 +192,8 @@ class AuthRepository {
 
         // Baris belum ada → naikkan delay (exponential backoff, max 2.4s)
         delay = Duration(
-            milliseconds: (delay.inMilliseconds * 2).clamp(0, 2400));
-
+          milliseconds: (delay.inMilliseconds * 2).clamp(0, 2400),
+        );
       } catch (e) {
         // Bisa terjadi jika RLS belum siap, atau koneksi sesaat putus
         // Log dan lanjut retry (jangan throw di sini)
@@ -207,7 +204,8 @@ class AuthRepository {
           );
         }
         delay = Duration(
-            milliseconds: (delay.inMilliseconds * 2).clamp(0, 2400));
+          milliseconds: (delay.inMilliseconds * 2).clamp(0, 2400),
+        );
       }
     }
 
@@ -220,7 +218,7 @@ class AuthRepository {
   // ─── Retry fetch untuk signIn dan restore session ─────────────
   Future<UserModel> _fetchProfileWithRetry(String userId) async {
     const maxAttempts = 3;
-    Duration delay    = const Duration(milliseconds: 300);
+    Duration delay = const Duration(milliseconds: 300);
 
     for (int i = 1; i <= maxAttempts; i++) {
       try {
@@ -230,7 +228,6 @@ class AuthRepository {
             .single(); // single() — kita HARAPKAN row ada (untuk login/restore)
 
         return UserModel.fromMap(data);
-
       } catch (e) {
         if (i == maxAttempts) {
           throw AppException(
@@ -294,7 +291,7 @@ class AppException implements Exception {
   const AppException(this.message, {this.isInfo = false});
 
   final String message;
-  final bool   isInfo;
+  final bool isInfo;
 
   @override
   String toString() => message;
