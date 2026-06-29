@@ -65,6 +65,19 @@ class TicketFilterNotifier extends Notifier<TicketFilter> {
   void clear() => state = const TicketFilter();
 }
 
+// ─── Helpdesk: Toggle filter tiket yang ditugaskan ────────────
+final helpdeskAssignedFilterProvider =
+    NotifierProvider<HelpdeskAssignedFilterNotifier, bool>(
+      HelpdeskAssignedFilterNotifier.new,
+    );
+
+class HelpdeskAssignedFilterNotifier extends Notifier<bool> {
+  @override
+  bool build() => true;
+
+  void updateState(bool value) => state = value;
+}
+
 // ─── Ticket List Provider ─────────────────────────────────────
 final ticketListProvider =
     AsyncNotifierProvider<TicketListNotifier, List<TicketModel>>(
@@ -77,8 +90,15 @@ class TicketListNotifier extends AsyncNotifier<List<TicketModel>> {
     // Re-fetch ketika filter berubah (watch)
     final filter = ref.watch(ticketFilterProvider);
     final user = ref.watch(authProvider).value;
+    final helpdeskOnlyAssigned = ref.watch(helpdeskAssignedFilterProvider);
 
     final createdById = user?.role == UserRole.user ? user?.id : null;
+
+    // Helpdesk: default hanya lihat tiket yang ditugaskan kepadanya
+    String? assignedTo = filter.assignedToId;
+    if (user?.role == UserRole.helpdesk && helpdeskOnlyAssigned) {
+      assignedTo = user?.id;
+    }
 
     return ref
         .read(ticketRepositoryProvider)
@@ -87,7 +107,7 @@ class TicketListNotifier extends AsyncNotifier<List<TicketModel>> {
           priority: filter.priority,
           search: filter.search.isNotEmpty ? filter.search : null,
           createdById: createdById,
-          assignedToId: filter.assignedToId,
+          assignedToId: assignedTo,
         );
   }
 }

@@ -179,6 +179,9 @@ class _TicketListPageState extends ConsumerState<TicketListPage> {
   Widget build(BuildContext context) {
     final ticketsAsync = ref.watch(ticketListProvider);
     final filter = ref.watch(ticketFilterProvider);
+    final authState = ref.watch(authProvider);
+    final isHelpdesk = authState.value?.role == UserRole.helpdesk;
+    final helpdeskOnlyAssigned = ref.watch(helpdeskAssignedFilterProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -227,6 +230,37 @@ class _TicketListPageState extends ConsumerState<TicketListPage> {
                   ref.read(ticketFilterProvider.notifier).setSearch(q),
             ),
           ),
+
+          // Helpdesk: toggle Tiket Saya vs Semua Tiket
+          if (isHelpdesk)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+              child: SizedBox(
+                width: double.infinity,
+                child: SegmentedButton<bool>(
+                  segments: const [
+                    ButtonSegment(
+                      value: true,
+                      label: Text('Tiket Saya'),
+                      icon: Icon(Icons.assignment_ind_rounded, size: 18),
+                    ),
+                    ButtonSegment(
+                      value: false,
+                      label: Text('Semua Tiket'),
+                      icon: Icon(Icons.list_alt_rounded, size: 18),
+                    ),
+                  ],
+                  selected: {helpdeskOnlyAssigned},
+                  onSelectionChanged: (v) =>
+                      ref.read(helpdeskAssignedFilterProvider.notifier).updateState(
+                          v.first),
+                  style: ButtonStyle(
+                    visualDensity: VisualDensity.compact,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                ),
+              ),
+            ),
 
           // Active filter chips
           if (filter.hasFilter)

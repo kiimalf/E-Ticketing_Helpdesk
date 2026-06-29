@@ -52,6 +52,20 @@ class _TicketDetailPageState extends ConsumerState<TicketDetailPage> {
   }
 
   void _showStatusSheet(TicketModel ticket) {
+    final user = ref.read(authProvider).value;
+    final isHelpdesk = user?.role == UserRole.helpdesk;
+
+    // Helpdesk hanya bisa update tiket yang ditugaskan kepadanya
+    if (isHelpdesk && ticket.assignedToId != user?.id) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Anda hanya bisa mengubah status tiket yang ditugaskan kepada Anda'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -202,11 +216,23 @@ class _TicketDetailPageState extends ConsumerState<TicketDetailPage> {
             ),
           if (isStaff)
             ticketAsync.maybeWhen(
-              data: (t) => IconButton(
-                icon: const Icon(Icons.edit_outlined),
-                tooltip: 'Update Status',
-                onPressed: () => _showStatusSheet(t),
-              ),
+              data: (t) {
+                final isHelpdesk = user?.role == UserRole.helpdesk;
+                final isAssignedToMe = t.assignedToId == user?.id;
+                // Helpdesk: tampilkan icon berbeda jika tiket bukan miliknya
+                return IconButton(
+                  icon: Icon(
+                    Icons.edit_outlined,
+                    color: (isHelpdesk && !isAssignedToMe)
+                        ? Theme.of(context).disabledColor
+                        : null,
+                  ),
+                  tooltip: (isHelpdesk && !isAssignedToMe)
+                      ? 'Tiket ini tidak ditugaskan kepada Anda'
+                      : 'Update Status',
+                  onPressed: () => _showStatusSheet(t),
+                );
+              },
               orElse: () => const SizedBox.shrink(),
             ),
         ],
