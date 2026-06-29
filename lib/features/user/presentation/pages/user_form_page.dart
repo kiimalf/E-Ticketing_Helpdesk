@@ -140,8 +140,9 @@ class _UserFormPageState extends ConsumerState<UserFormPage> {
                 ),
                 keyboardType: TextInputType.emailAddress,
                 validator: (value) {
-                  if (value == null || value.isEmpty)
+                  if (value == null || value.isEmpty) {
                     return 'Email tidak boleh kosong';
+                  }
                   if (!value.contains('@')) return 'Format email tidak valid';
                   return null;
                 },

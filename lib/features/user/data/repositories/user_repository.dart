@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:uuid/uuid.dart';
+
 import 'package:eticketing_helpdesk/core/constants/app_constants.dart';
 import 'package:eticketing_helpdesk/core/services/supabase_service.dart';
 import 'package:eticketing_helpdesk/features/auth/data/models/user_model.dart';
