@@ -303,6 +303,54 @@ class TicketRepository {
       'performed_by': performedBy,
     });
   }
+
+  // ─── Delete Tiket (Admin only) ────────────────────────────
+  Future<void> deleteTicket(String ticketId) async {
+    // 1. Hapus lampiran dari Storage bucket
+    try {
+      final attachments = await SupabaseService.from(SupabaseTables.attachments)
+          .select('file_url')
+          .eq('ticket_id', ticketId);
+
+      if ((attachments as List).isNotEmpty) {
+        // Ambil storage paths dari URL
+        final paths = <String>[];
+        for (final a in attachments) {
+          final url = a['file_url'] as String?;
+          if (url != null && url.contains('ticket-attachments/')) {
+            final idx = url.indexOf('tickets/');
+            if (idx != -1) {
+              paths.add(url.substring(idx));
+            }
+          }
+        }
+        if (paths.isNotEmpty) {
+          await SupabaseService.bucket(SupabaseBuckets.ticketAttachments)
+              .remove(paths);
+        }
+      }
+    } catch (_) {
+      // Abaikan error storage, lanjut hapus data
+    }
+
+    // 2. Hapus data terkait (cascade manual)
+    await SupabaseService.from(SupabaseTables.comments)
+        .delete()
+        .eq('ticket_id', ticketId);
+
+    await SupabaseService.from(SupabaseTables.attachments)
+        .delete()
+        .eq('ticket_id', ticketId);
+
+    await SupabaseService.from(SupabaseTables.ticketHistory)
+        .delete()
+        .eq('ticket_id', ticketId);
+
+    // 3. Hapus tiket utama
+    await SupabaseService.from(SupabaseTables.tickets)
+        .delete()
+        .eq('id', ticketId);
+  }
 }
 
 // ─── Riverpod Provider ────────────────────────────────────────

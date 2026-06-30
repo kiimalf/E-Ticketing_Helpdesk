@@ -210,6 +210,129 @@ class _TicketDetailPageState extends ConsumerState<TicketDetailPage> {
     );
   }
 
+  void _showDeleteDialog(TicketModel ticket) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.red.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(
+                Icons.delete_forever_rounded,
+                color: Colors.red,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'Hapus Tiket',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Anda yakin ingin menghapus tiket ini?',
+              style: Theme.of(ctx).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.red.withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: Colors.red.withValues(alpha: 0.2),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    ticket.ticketNumber,
+                    style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                      color: Colors.red,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    ticket.title,
+                    style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Semua data terkait (komentar, lampiran, riwayat) akan ikut terhapus. Tindakan ini tidak dapat dibatalkan.',
+              style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                color: Colors.red.shade700,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              minimumSize: const Size(100, 40),
+            ),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              final messenger = ScaffoldMessenger.of(context);
+              final navigator = Navigator.of(context);
+              try {
+                await ref
+                    .read(ticketRepositoryProvider)
+                    .deleteTicket(widget.ticketId);
+                ref.invalidate(ticketListProvider);
+                ref.invalidate(dashboardStatsProvider);
+                messenger.showSnackBar(
+                  const SnackBar(
+                    content: Text('Tiket berhasil dihapus'),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+                navigator.pop();
+              } catch (e) {
+                messenger.showSnackBar(
+                  SnackBar(
+                    content: Text('Gagal menghapus tiket: $e'),
+                    backgroundColor: Colors.red,
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
+            },
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final ticketAsync = ref.watch(ticketDetailProvider(widget.ticketId));
@@ -223,6 +346,15 @@ class _TicketDetailPageState extends ConsumerState<TicketDetailPage> {
           orElse: () => const Text('Detail Tiket'),
         ),
         actions: [
+          if (isStaff && user?.role == UserRole.admin)
+            ticketAsync.maybeWhen(
+              data: (t) => IconButton(
+                icon: const Icon(Icons.delete_outline_rounded),
+                tooltip: 'Hapus Tiket',
+                onPressed: () => _showDeleteDialog(t),
+              ),
+              orElse: () => const SizedBox.shrink(),
+            ),
           if (isStaff && user?.role == UserRole.admin)
             ticketAsync.maybeWhen(
               data: (t) => IconButton(
