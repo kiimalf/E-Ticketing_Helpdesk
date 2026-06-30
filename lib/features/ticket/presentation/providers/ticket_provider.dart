@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:eticketing_helpdesk/core/constants/app_constants.dart';
 import 'package:eticketing_helpdesk/features/auth/presentation/providers/auth_provider.dart';
 import 'package:eticketing_helpdesk/features/ticket/data/models/ticket_model.dart';
+import 'package:eticketing_helpdesk/features/ticket/data/models/ticket_history_model.dart';
 import 'package:eticketing_helpdesk/features/ticket/data/repositories/ticket_repository.dart';
 
 // ─── Filter State ─────────────────────────────────────────────
@@ -120,6 +121,12 @@ final ticketDetailProvider = FutureProvider.family<TicketModel, String>((
   return ref.read(ticketRepositoryProvider).fetchTicketById(id);
 });
 
+// ─── Ticket History Provider ──────────────────────────────────
+final ticketHistoryProvider =
+    FutureProvider.family<List<TicketHistoryModel>, String>((ref, ticketId) {
+  return ref.read(ticketRepositoryProvider).fetchTicketHistory(ticketId);
+});
+
 // ─── Create Ticket Provider ───────────────────────────────────
 final createTicketProvider = AsyncNotifierProvider<CreateTicketNotifier, void>(
   CreateTicketNotifier.new,
@@ -171,8 +178,18 @@ class CreateTicketNotifier extends AsyncNotifier<void> {
 // ─── Dashboard Stats Provider ─────────────────────────────────
 final dashboardStatsProvider = FutureProvider.autoDispose((ref) async {
   final user = ref.watch(authProvider).value;
+
+  // Role-based filtering:
+  // - User: hanya tiket milik sendiri (created_by)
+  // - Helpdesk: hanya tiket yang ditugaskan (assigned_to)
+  // - Admin: semua tiket
   final userId = user?.role == UserRole.user ? user?.id : null;
-  return ref.read(ticketRepositoryProvider).fetchStats(userId: userId);
+  final assignedToId = user?.role == UserRole.helpdesk ? user?.id : null;
+
+  return ref.read(ticketRepositoryProvider).fetchStats(
+    userId: userId,
+    assignedToId: assignedToId,
+  );
 });
 
 // ─── Recent Tickets (dashboard) ───────────────────────────────
@@ -180,11 +197,17 @@ final recentTicketsProvider = FutureProvider.autoDispose<List<TicketModel>>((
   ref,
 ) async {
   final user = ref.watch(authProvider).value;
-  final userId = user?.role == UserRole.user ? user?.id : null;
+
+  // Role-based filtering:
+  // - User: hanya tiket milik sendiri (created_by)
+  // - Helpdesk: hanya tiket yang ditugaskan (assigned_to)
+  // - Admin: semua tiket
+  final createdById = user?.role == UserRole.user ? user?.id : null;
+  final assignedToId = user?.role == UserRole.helpdesk ? user?.id : null;
 
   final all = await ref
       .read(ticketRepositoryProvider)
-      .fetchTickets(createdById: userId);
+      .fetchTickets(createdById: createdById, assignedToId: assignedToId);
 
   return all.take(5).toList();
 });

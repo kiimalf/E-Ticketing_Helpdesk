@@ -7,6 +7,7 @@ import 'package:eticketing_helpdesk/core/services/supabase_service.dart';
 import 'package:eticketing_helpdesk/features/ticket/data/models/ticket_model.dart';
 import 'package:eticketing_helpdesk/features/ticket/data/models/ticket_comment_model.dart';
 import 'package:eticketing_helpdesk/features/ticket/data/models/ticket_attachment_model.dart';
+import 'package:eticketing_helpdesk/features/ticket/data/models/ticket_history_model.dart';
 import 'package:eticketing_helpdesk/features/dashboard/data/models/dashboard_stats_model.dart';
 
 class TicketRepository {
@@ -107,12 +108,24 @@ class TicketRepository {
       );
     }
 
-    // 3. Kembalikan tiket lengkap dengan join
+    // 3. Log history: tiket dibuat
+    await addHistory(
+      ticketId: ticketId,
+      action: 'created',
+      performedBy: createdById,
+    );
+
+    // 4. Kembalikan tiket lengkap dengan join
     return fetchTicketById(ticketId);
   }
 
   // ─── Update status tiket ──────────────────────────────────
-  Future<void> updateStatus(String ticketId, TicketStatus newStatus) async {
+  Future<void> updateStatus(
+    String ticketId,
+    TicketStatus newStatus, {
+    TicketStatus? oldStatus,
+    String? performedBy,
+  }) async {
     final updates = <String, dynamic>{
       'status': newStatus.dbValue,
       'updated_at': DateTime.now().toIso8601String(),
@@ -125,10 +138,26 @@ class TicketRepository {
     await SupabaseService.from(
       SupabaseTables.tickets,
     ).update(updates).eq('id', ticketId);
+
+    // Log history: status berubah
+    if (performedBy != null) {
+      await addHistory(
+        ticketId: ticketId,
+        action: 'status_changed',
+        oldValue: oldStatus?.dbValue,
+        newValue: newStatus.dbValue,
+        performedBy: performedBy,
+      );
+    }
   }
 
   // ─── Assign tiket ke staff ────────────────────────────────
-  Future<void> assignTicket(String ticketId, String assigneeId) async {
+  Future<void> assignTicket(
+    String ticketId,
+    String assigneeId, {
+    String? assigneeName,
+    String? performedBy,
+  }) async {
     await SupabaseService.from(SupabaseTables.tickets)
         .update({
           'assigned_to': assigneeId,
@@ -136,6 +165,16 @@ class TicketRepository {
           'updated_at': DateTime.now().toIso8601String(),
         })
         .eq('id', ticketId);
+
+    // Log history: tiket di-assign
+    if (performedBy != null) {
+      await addHistory(
+        ticketId: ticketId,
+        action: 'assigned',
+        newValue: assigneeName ?? assigneeId,
+        performedBy: performedBy,
+      );
+    }
   }
 
   // ─── Tambah komentar ──────────────────────────────────────
@@ -162,6 +201,13 @@ class TicketRepository {
     await SupabaseService.from(SupabaseTables.tickets)
         .update({'updated_at': DateTime.now().toIso8601String()})
         .eq('id', ticketId);
+
+    // Log history: komentar ditambahkan
+    await addHistory(
+      ticketId: ticketId,
+      action: 'comment_added',
+      performedBy: authorId,
+    );
 
     return TicketCommentModel.fromMap(data);
   }
@@ -206,15 +252,56 @@ class TicketRepository {
   }
 
   // ─── Dashboard stats ──────────────────────────────────────
-  Future<DashboardStatsModel> fetchStats({String? userId}) async {
-    var query = SupabaseService.from(SupabaseTables.tickets).select('status');
+  Future<DashboardStatsModel> fetchStats({
+    String? userId,
+    String? assignedToId,
+  }) async {
+    var query = SupabaseService.from(SupabaseTables.tickets)
+        .select('status, assigned_to');
 
     if (userId != null) {
       query = query.eq('created_by', userId);
     }
+    if (assignedToId != null) {
+      query = query.eq('assigned_to', assignedToId);
+    }
 
     final data = await query;
     return DashboardStatsModel.fromRows(data as List);
+  }
+
+  // ─── Ticket History ───────────────────────────────────────
+
+  /// Ambil riwayat/log aktivitas sebuah tiket (terbaru di atas)
+  Future<List<TicketHistoryModel>> fetchTicketHistory(String ticketId) async {
+    final data = await SupabaseService.from(SupabaseTables.ticketHistory)
+        .select('''
+          *,
+          performer:profiles!ticket_history_performed_by_fkey(id, name)
+        ''')
+        .eq('ticket_id', ticketId)
+        .order('created_at', ascending: false);
+
+    return (data as List)
+        .map((m) => TicketHistoryModel.fromMap(m as Map<String, dynamic>))
+        .toList();
+  }
+
+  /// Simpan satu entry riwayat
+  Future<void> addHistory({
+    required String ticketId,
+    required String action,
+    String? oldValue,
+    String? newValue,
+    required String performedBy,
+  }) async {
+    await SupabaseService.from(SupabaseTables.ticketHistory).insert({
+      'ticket_id': ticketId,
+      'action': action,
+      'old_value': oldValue,
+      'new_value': newValue,
+      'performed_by': performedBy,
+    });
   }
 }
 

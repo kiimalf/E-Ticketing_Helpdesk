@@ -9,6 +9,7 @@ import 'package:eticketing_helpdesk/features/ticket/data/models/ticket_model.dar
 import 'package:eticketing_helpdesk/features/ticket/data/models/ticket_comment_model.dart';
 import 'package:eticketing_helpdesk/features/ticket/data/models/ticket_attachment_model.dart';
 import 'package:eticketing_helpdesk/features/auth/data/models/user_model.dart';
+import 'package:eticketing_helpdesk/features/ticket/data/models/ticket_history_model.dart';
 import 'package:eticketing_helpdesk/features/ticket/data/repositories/ticket_repository.dart';
 import 'package:eticketing_helpdesk/features/ticket/presentation/providers/ticket_provider.dart';
 import 'package:eticketing_helpdesk/features/user/presentation/providers/user_provider.dart';
@@ -47,6 +48,7 @@ class _TicketDetailPageState extends ConsumerState<TicketDetailPage> {
 
     if (comment != null) {
       ref.invalidate(ticketDetailProvider(widget.ticketId));
+      ref.invalidate(ticketHistoryProvider(widget.ticketId));
       _commentCtrl.clear();
     }
   }
@@ -88,10 +90,17 @@ class _TicketDetailPageState extends ConsumerState<TicketDetailPage> {
                 onChanged: (v) async {
                   Navigator.pop(ctx);
                   if (v != null) {
+                    final currentUser = ref.read(authProvider).value;
                     await ref
                         .read(ticketRepositoryProvider)
-                        .updateStatus(widget.ticketId, v);
+                        .updateStatus(
+                          widget.ticketId,
+                          v,
+                          oldStatus: ticket.status,
+                          performedBy: currentUser?.id,
+                        );
                     ref.invalidate(ticketDetailProvider(widget.ticketId));
+                    ref.invalidate(ticketHistoryProvider(widget.ticketId));
                     ref.invalidate(ticketListProvider);
                   }
                 },
@@ -153,13 +162,22 @@ class _TicketDetailPageState extends ConsumerState<TicketDetailPage> {
                               : null,
                           onTap: () async {
                             final messenger = ScaffoldMessenger.of(context);
+                            final currentUser = ref.read(authProvider).value;
                             Navigator.pop(ctx);
                             try {
                               await ref
                                   .read(ticketRepositoryProvider)
-                                  .assignTicket(widget.ticketId, h.id);
+                                  .assignTicket(
+                                    widget.ticketId,
+                                    h.id,
+                                    assigneeName: h.name,
+                                    performedBy: currentUser?.id,
+                                  );
                               ref.invalidate(
                                 ticketDetailProvider(widget.ticketId),
+                              );
+                              ref.invalidate(
+                                ticketHistoryProvider(widget.ticketId),
                               );
                               ref.invalidate(ticketListProvider);
                               messenger.showSnackBar(
@@ -262,6 +280,8 @@ class _TicketDetailPageState extends ConsumerState<TicketDetailPage> {
                     ],
                     const Divider(height: 32),
                     _buildTimeline(ticket),
+                    const Divider(height: 32),
+                    _buildHistorySection(),
                     const Divider(height: 32),
                     _buildCommentSection(ticket, user?.id ?? ''),
                     const SizedBox(height: 16),
@@ -479,6 +499,154 @@ class _TicketDetailPageState extends ConsumerState<TicketDetailPage> {
             ],
           );
         }),
+      ],
+    );
+  }
+
+  Widget _buildHistorySection() {
+    final theme = Theme.of(context);
+    final historyAsync = ref.watch(ticketHistoryProvider(widget.ticketId));
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text('Riwayat Aktivitas', style: theme.textTheme.titleMedium),
+            const SizedBox(width: 8),
+            historyAsync.maybeWhen(
+              data: (list) => Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppColors.accent.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '${list.length}',
+                  style: const TextStyle(
+                    color: AppColors.accent,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+              orElse: () => const SizedBox.shrink(),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        historyAsync.when(
+          loading: () => const Padding(
+            padding: EdgeInsets.symmetric(vertical: 16),
+            child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+          ),
+          error: (e, _) => Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Center(
+              child: Text(
+                'Gagal memuat riwayat',
+                style: theme.textTheme.bodyMedium,
+              ),
+            ),
+          ),
+          data: (historyList) {
+            if (historyList.isEmpty) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 24),
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.history_rounded,
+                        size: 40,
+                        color: theme.dividerColor,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Belum ada riwayat',
+                        style: theme.textTheme.bodyMedium,
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+
+            return Column(
+              children: historyList
+                  .asMap()
+                  .entries
+                  .map((e) => _buildHistoryEntry(
+                        e.value,
+                        isLast: e.key == historyList.length - 1,
+                      ))
+                  .toList(),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildHistoryEntry(TicketHistoryModel entry, {bool isLast = false}) {
+    final theme = Theme.of(context);
+
+    final (icon, color) = switch (entry.action) {
+      'created' => (Icons.add_circle_rounded, AppColors.statusResolved),
+      'status_changed' => (Icons.sync_alt_rounded, AppColors.statusInProgress),
+      'assigned' => (Icons.assignment_ind_rounded, AppColors.statusAssigned),
+      'comment_added' => (Icons.chat_bubble_rounded, AppColors.accent),
+      _ => (Icons.info_outline_rounded, AppColors.statusClosed),
+    };
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Timeline indicator
+        Column(
+          children: [
+            Container(
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, size: 14, color: color),
+            ),
+            if (!isLast)
+              Container(
+                width: 2,
+                height: 32,
+                color: theme.dividerColor,
+              ),
+          ],
+        ),
+        const SizedBox(width: 12),
+        // Content
+        Expanded(
+          child: Padding(
+            padding: EdgeInsets.only(bottom: isLast ? 0 : 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  entry.description,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: theme.textTheme.bodyLarge?.color,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${entry.performedByName} · ${_fmtDate(entry.createdAt)}',
+                  style: theme.textTheme.bodySmall,
+                ),
+              ],
+            ),
+          ),
+        ),
       ],
     );
   }
