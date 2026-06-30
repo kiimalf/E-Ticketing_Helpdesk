@@ -16,6 +16,7 @@ import 'package:eticketing_helpdesk/features/ticket/presentation/pages/ticket_de
 import 'package:eticketing_helpdesk/features/ticket/presentation/pages/create_ticket_page.dart';
 import 'package:eticketing_helpdesk/features/user/presentation/pages/user_list_page.dart';
 import 'package:eticketing_helpdesk/features/user/presentation/pages/user_form_page.dart';
+import 'package:eticketing_helpdesk/features/settings/presentation/pages/settings_page.dart';
 import 'package:eticketing_helpdesk/features/auth/data/models/user_model.dart';
 import 'package:eticketing_helpdesk/main_shell.dart';
 
@@ -85,6 +86,9 @@ class HelpdeskApp extends ConsumerWidget {
       case AppRoutes.ticketDetail:
         final id = settings.arguments as String?;
         page = id != null ? TicketDetailPage(ticketId: id) : const MainShell();
+        break;
+      case AppRoutes.settings:
+        page = const SettingsPage();
         break;
       case AppRoutes.users:
         page = const UserListPage();

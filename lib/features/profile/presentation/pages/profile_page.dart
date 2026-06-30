@@ -57,7 +57,6 @@ class ProfilePage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(authProvider).value;
-    final isDark = ref.watch(themeProvider);
     final statsAsync = ref.watch(dashboardStatsProvider);
 
     if (user == null) {
@@ -197,26 +196,12 @@ class ProfilePage extends ConsumerWidget {
             // ── SEKSI: Pengaturan ──────────────────────────
             _sectionLabel(context, 'Pengaturan'),
 
-            // Dark mode toggle
-            SwitchListTile(
-              value: isDark,
-              onChanged: (_) => ref.read(themeProvider.notifier).toggle(),
-              secondary: _tileIcon(
-                isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
-              ),
-              title: const Text('Mode Tampilan'),
-              subtitle: Text(isDark ? 'Mode Gelap' : 'Mode Terang'),
-              activeThumbColor: AppColors.primary,
-            ),
-
-            const Divider(height: 1, indent: 56),
-
             _settingTile(
               context,
-              icon: Icons.notifications_outlined,
-              title: 'Notifikasi',
-              sub: 'Kelola preferensi notifikasi',
-              onTap: () {}, // TODO: navigate ke halaman notif settings
+              icon: Icons.settings_outlined,
+              title: 'Pengaturan',
+              sub: 'Tampilan, notifikasi, dan tentang aplikasi',
+              onTap: () => Navigator.pushNamed(context, AppRoutes.settings),
             ),
 
             const SizedBox(height: 8),
@@ -243,21 +228,6 @@ class ProfilePage extends ConsumerWidget {
               title: 'Reset Password',
               sub: 'Kirim link reset ke email Anda',
               onTap: () => _showResetPasswordDialog(context, ref, user.email),
-            ),
-
-            const Divider(height: 1, indent: 56),
-
-            _settingTile(
-              context,
-              icon: Icons.info_outline_rounded,
-              title: 'Tentang Aplikasi',
-              sub: '${AppStrings.appName} ${AppStrings.appVersion}',
-              onTap: () => showAboutDialog(
-                context: context,
-                applicationName: AppStrings.appName,
-                applicationVersion: AppStrings.appVersion,
-                applicationLegalese: '© 2026 ${AppStrings.university}',
-              ),
             ),
 
             const SizedBox(height: 16),
