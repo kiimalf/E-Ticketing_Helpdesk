@@ -207,58 +207,64 @@ class DashboardPage extends ConsumerWidget {
 
   // ─── Stats Grid ───────────────────────────────
   Widget _buildStatsGrid({bool isLoading = false, dynamic stats}) {
-    const gridProps = (
-      crossAxisCount: 2,
-      crossAxisSpacing: 10.0,
-      mainAxisSpacing: 10.0,
-      childAspectRatio: 0.9,
-    );
-
     if (isLoading) {
-      return GridView.count(
-        crossAxisCount: gridProps.crossAxisCount,
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        crossAxisSpacing: gridProps.crossAxisSpacing,
-        mainAxisSpacing: gridProps.mainAxisSpacing,
-        childAspectRatio: gridProps.childAspectRatio,
-        children: List.generate(4, (_) => _shimmerBox()),
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          final cardWidth = (constraints.maxWidth - 20) / 3;
+          return Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: List.generate(
+              5,
+              (_) => SizedBox(
+                width: cardWidth,
+                height: cardWidth * 1.1,
+                child: _shimmerBox(),
+              ),
+            ),
+          );
+        },
       );
     }
 
-    return GridView.count(
-      crossAxisCount: gridProps.crossAxisCount,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisSpacing: gridProps.crossAxisSpacing,
-      mainAxisSpacing: gridProps.mainAxisSpacing,
-      childAspectRatio: gridProps.childAspectRatio,
-      children: [
-        StatsCard(
-          label: 'Total',
-          count: stats.total,
-          color: AppColors.primary,
-          icon: Icons.confirmation_number_rounded,
-        ),
-        StatsCard(
-          label: 'Open',
-          count: stats.open,
-          color: AppColors.statusOpen,
-          icon: Icons.radio_button_unchecked_rounded,
-        ),
-        StatsCard(
-          label: 'In Progress',
-          count: stats.inProgress,
-          color: AppColors.statusInProgress,
-          icon: Icons.pending_rounded,
-        ),
-        StatsCard(
-          label: 'Resolved',
-          count: stats.resolved,
-          color: AppColors.statusResolved,
-          icon: Icons.check_circle_outline_rounded,
-        ),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final cardWidth = (constraints.maxWidth - 20) / 3;
+        final cardHeight = cardWidth * 1.1;
+
+        final items = <_StatsItem>[
+          _StatsItem('Total', stats.total, AppColors.primary,
+              Icons.confirmation_number_rounded),
+          _StatsItem(
+              'Open', stats.open, AppColors.statusOpen,
+              Icons.radio_button_unchecked_rounded),
+          _StatsItem('Assigned', stats.assigned, AppColors.statusAssigned,
+              Icons.assignment_ind_rounded),
+          _StatsItem('In Progress', stats.inProgress,
+              AppColors.statusInProgress, Icons.pending_rounded),
+          _StatsItem('Closed', stats.closed, AppColors.statusClosed,
+              Icons.task_alt_rounded),
+        ];
+
+        return Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: items
+              .map(
+                (item) => SizedBox(
+                  width: cardWidth,
+                  height: cardHeight,
+                  child: StatsCard(
+                    label: item.label,
+                    count: item.count,
+                    color: item.color,
+                    icon: item.icon,
+                  ),
+                ),
+              )
+              .toList(),
+        );
+      },
     );
   }
 
@@ -270,4 +276,14 @@ class DashboardPage extends ConsumerWidget {
       borderRadius: BorderRadius.circular(14),
     ),
   );
+}
+
+// ─── Helper class for stats items ─────────────────────────────
+class _StatsItem {
+  final String label;
+  final int count;
+  final Color color;
+  final IconData icon;
+
+  const _StatsItem(this.label, this.count, this.color, this.icon);
 }
