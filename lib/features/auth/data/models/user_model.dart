@@ -1,3 +1,4 @@
+// ignore_for_file: use_null_aware_elements
 import 'package:eticketing_helpdesk/core/constants/app_constants.dart';
 
 class UserModel {
@@ -9,6 +10,7 @@ class UserModel {
   final String? department;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final bool isActive;
 
   const UserModel({
     required this.id,
@@ -19,20 +21,23 @@ class UserModel {
     this.department,
     required this.createdAt,
     required this.updatedAt,
+    this.isActive = true,
   });
 
   // ─── Factory: dari Map Supabase ───────────────────────────
   factory UserModel.fromMap(Map<String, dynamic> map) {
     return UserModel(
-      id:         map['id']          as String,
-      name:       (map['name']       as String?)  ?? 'Unknown',
-      email:      (map['email']      as String?)  ?? '',
-      avatarUrl:   map['avatar_url'] as String?,
-      role:       UserRoleX.fromString(map['role'] as String?),
-      department:  map['department'] as String?,
-      createdAt:  DateTime.parse(map['created_at'] as String),
-      updatedAt:  DateTime.parse(
-          (map['updated_at'] as String?) ?? map['created_at'] as String),
+      id: map['id'] as String,
+      name: (map['name'] as String?) ?? 'Unknown',
+      email: (map['email'] as String?) ?? '',
+      avatarUrl: map['avatar_url'] as String?,
+      role: UserRoleX.fromString(map['role'] as String?),
+      department: map['department'] as String?,
+      createdAt: DateTime.parse(map['created_at'] as String),
+      updatedAt: DateTime.parse(
+        (map['updated_at'] as String?) ?? map['created_at'] as String,
+      ),
+      isActive: map['is_active'] as bool? ?? true,
     );
   }
 
@@ -41,31 +46,31 @@ class UserModel {
     String? name,
     String? avatarUrl,
     String? department,
-  }) =>
-      {
-        if (name != null)       'name':       name,
-        if (avatarUrl != null)  'avatar_url': avatarUrl,
-        if (department != null) 'department': department,
-        'updated_at': DateTime.now().toIso8601String(),
-      };
+  }) => {
+    if (name != null) 'name': name,
+    if (avatarUrl != null) 'avatar_url': avatarUrl,
+    if (department != null) 'department': department,
+    'updated_at': DateTime.now().toIso8601String(),
+  };
 
   // ─── copyWith ─────────────────────────────────────────────
   UserModel copyWith({
-    String?   name,
-    String?   avatarUrl,
+    String? name,
+    String? avatarUrl,
     UserRole? role,
-    String?   department,
-  }) =>
-      UserModel(
-        id:         id,
-        name:       name       ?? this.name,
-        email:      email,
-        avatarUrl:  avatarUrl  ?? this.avatarUrl,
-        role:       role       ?? this.role,
-        department: department ?? this.department,
-        createdAt:  createdAt,
-        updatedAt:  DateTime.now(),
-      );
+    String? department,
+    bool? isActive,
+  }) => UserModel(
+    id: id,
+    name: name ?? this.name,
+    email: email,
+    avatarUrl: avatarUrl ?? this.avatarUrl,
+    role: role ?? this.role,
+    department: department ?? this.department,
+    createdAt: createdAt,
+    updatedAt: DateTime.now(),
+    isActive: isActive ?? this.isActive,
+  );
 
   @override
   String toString() =>

@@ -1,9 +1,11 @@
+import 'package:eticketing_helpdesk/core/constants/app_constants.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:eticketing_helpdesk/core/constants/app_constants.dart';
+
 import 'package:eticketing_helpdesk/core/theme/app_theme.dart';
 import 'package:eticketing_helpdesk/core/widgets/app_widgets.dart';
 import 'package:eticketing_helpdesk/features/auth/presentation/providers/auth_provider.dart';
+
 import 'package:eticketing_helpdesk/features/ticket/presentation/providers/ticket_provider.dart';
 import 'package:eticketing_helpdesk/features/ticket/presentation/pages/ticket_detail_page.dart';
 import 'package:eticketing_helpdesk/features/ticket/presentation/pages/create_ticket_page.dart';
@@ -14,9 +16,9 @@ class DashboardPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme       = Theme.of(context);
-    final user        = ref.watch(authProvider).valueOrNull;
-    final statsAsync  = ref.watch(dashboardStatsProvider);
+    final theme = Theme.of(context);
+    final user = ref.watch(authProvider).value;
+    final statsAsync = ref.watch(dashboardStatsProvider);
     final recentAsync = ref.watch(recentTicketsProvider);
 
     return Scaffold(
@@ -48,6 +50,7 @@ class DashboardPage extends ConsumerWidget {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'fab_dashboard',
         onPressed: () => Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const CreateTicketPage()),
@@ -68,12 +71,11 @@ class DashboardPage extends ConsumerWidget {
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
               sliver: SliverList(
                 delegate: SliverChildListDelegate([
-
                   // ── Banner ─────────────────────────────────
                   statsAsync.when(
                     loading: () => _shimmerBox(height: 110),
-                    error:   (_, __) => const SizedBox.shrink(),
-                    data:    (s) => _buildBanner(s.open, s.total),
+                    error: (_, _) => const SizedBox.shrink(),
+                    data: (s) => _buildBanner(s.open, s.total),
                   ),
                   const SizedBox(height: 24),
 
@@ -83,9 +85,10 @@ class DashboardPage extends ConsumerWidget {
 
                   statsAsync.when(
                     loading: () => _buildStatsGrid(isLoading: true),
-                    error:   (e, _) => AppErrorView(
-                        message: e.toString().replaceAll('Exception: ', '')),
-                    data:    (s) => _buildStatsGrid(stats: s),
+                    error: (e, _) => AppErrorView(
+                      message: e.toString().replaceAll('Exception: ', ''),
+                    ),
+                    data: (s) => _buildStatsGrid(stats: s),
                   ),
                   const SizedBox(height: 24),
 
@@ -100,8 +103,8 @@ class DashboardPage extends ConsumerWidget {
                   const SizedBox(height: 12),
 
                   recentAsync.when(
-                    loading: () => const Center(
-                        child: CircularProgressIndicator()),
+                    loading: () =>
+                        const Center(child: CircularProgressIndicator()),
                     error: (e, _) => AppErrorView(
                       message: e.toString().replaceAll('Exception: ', ''),
                       onRetry: () => ref.invalidate(recentTicketsProvider),
@@ -115,16 +118,18 @@ class DashboardPage extends ConsumerWidget {
                           )
                         : Column(
                             children: tickets
-                                .map((t) => TicketCardWidget(
-                                      ticket: t,
-                                      onTap: () => Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (_) => TicketDetailPage(
-                                              ticketId: t.id),
-                                        ),
+                                .map(
+                                  (t) => TicketCardWidget(
+                                    ticket: t,
+                                    onTap: () => Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            TicketDetailPage(ticketId: t.id),
                                       ),
-                                    ))
+                                    ),
+                                  ),
+                                )
                                 .toList(),
                           ),
                   ),
@@ -186,11 +191,14 @@ class DashboardPage extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.15),
+              color: Colors.white.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(Icons.support_agent_rounded,
-                color: Colors.white, size: 30),
+            child: const Icon(
+              Icons.support_agent_rounded,
+              color: Colors.white,
+              size: 30,
+            ),
           ),
         ],
       ),
@@ -198,71 +206,84 @@ class DashboardPage extends ConsumerWidget {
   }
 
   // ─── Stats Grid ───────────────────────────────
-  Widget _buildStatsGrid({
-    bool isLoading = false,
-    dynamic stats,
-  }) {
-    const gridProps = (
-      crossAxisCount:    2,
-      crossAxisSpacing:  10.0,
-      mainAxisSpacing:   10.0,
-      childAspectRatio:  0.9,
-    );
-
+  Widget _buildStatsGrid({bool isLoading = false, dynamic stats}) {
     if (isLoading) {
-      return GridView.count(
-        crossAxisCount:   gridProps.crossAxisCount,
-        shrinkWrap:       true,
-        physics:          const NeverScrollableScrollPhysics(),
-        crossAxisSpacing: gridProps.crossAxisSpacing,
-        mainAxisSpacing:  gridProps.mainAxisSpacing,
-        childAspectRatio: gridProps.childAspectRatio,
-        children: List.generate(4, (_) => _shimmerBox()),
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          final cardWidth = (constraints.maxWidth - 20) / 3;
+          return Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: List.generate(
+              5,
+              (_) => SizedBox(
+                width: cardWidth,
+                height: cardWidth * 1.1,
+                child: _shimmerBox(),
+              ),
+            ),
+          );
+        },
       );
     }
 
-    return GridView.count(
-      crossAxisCount:   gridProps.crossAxisCount,
-      shrinkWrap:       true,
-      physics:          const NeverScrollableScrollPhysics(),
-      crossAxisSpacing: gridProps.crossAxisSpacing,
-      mainAxisSpacing:  gridProps.mainAxisSpacing,
-      childAspectRatio: gridProps.childAspectRatio,
-      children: [
-        StatsCard(
-          label: 'Total',
-          count: stats.total,
-          color: AppColors.primary,
-          icon:  Icons.confirmation_number_rounded,
-        ),
-        StatsCard(
-          label: 'Open',
-          count: stats.open,
-          color: AppColors.statusOpen,
-          icon:  Icons.radio_button_unchecked_rounded,
-        ),
-        StatsCard(
-          label: 'In Progress',
-          count: stats.inProgress,
-          color: AppColors.statusInProgress,
-          icon:  Icons.pending_rounded,
-        ),
-        StatsCard(
-          label: 'Resolved',
-          count: stats.resolved,
-          color: AppColors.statusResolved,
-          icon:  Icons.check_circle_outline_rounded,
-        ),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final cardWidth = (constraints.maxWidth - 20) / 3;
+        final cardHeight = cardWidth * 1.1;
+
+        final items = <_StatsItem>[
+          _StatsItem('Total', stats.total, AppColors.primary,
+              Icons.confirmation_number_rounded),
+          _StatsItem(
+              'Open', stats.open, AppColors.statusOpen,
+              Icons.radio_button_unchecked_rounded),
+          _StatsItem('Assigned', stats.assigned, AppColors.statusAssigned,
+              Icons.assignment_ind_rounded),
+          _StatsItem('In Progress', stats.inProgress,
+              AppColors.statusInProgress, Icons.pending_rounded),
+          _StatsItem('Closed', stats.closed, AppColors.statusClosed,
+              Icons.task_alt_rounded),
+        ];
+
+        return Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: items
+              .map(
+                (item) => SizedBox(
+                  width: cardWidth,
+                  height: cardHeight,
+                  child: StatsCard(
+                    label: item.label,
+                    count: item.count,
+                    color: item.color,
+                    icon: item.icon,
+                  ),
+                ),
+              )
+              .toList(),
+        );
+      },
     );
   }
 
   // ─── Shimmer placeholder ───────────────────────────────────
   Widget _shimmerBox({double? height}) => Container(
-        height: height,
-        decoration: BoxDecoration(
-          color: Colors.grey.withOpacity(0.15),
-          borderRadius: BorderRadius.circular(14),
-        ),
-      );
+    height: height,
+    decoration: BoxDecoration(
+      color: Colors.grey.withValues(alpha: 0.15),
+      borderRadius: BorderRadius.circular(14),
+    ),
+  );
+}
+
+// ─── Helper class for stats items ─────────────────────────────
+class _StatsItem {
+  final String label;
+  final int count;
+  final Color color;
+  final IconData icon;
+
+  const _StatsItem(this.label, this.count, this.color, this.icon);
 }

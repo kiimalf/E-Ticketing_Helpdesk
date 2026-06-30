@@ -21,11 +21,21 @@ class _SplashPageState extends ConsumerState<SplashPage>
   void initState() {
     super.initState();
     _ctrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 900));
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    );
     _fade = Tween<double>(begin: 0, end: 1).animate(
-        CurvedAnimation(parent: _ctrl, curve: const Interval(0, 0.6, curve: Curves.easeOut)));
+      CurvedAnimation(
+        parent: _ctrl,
+        curve: const Interval(0, 0.6, curve: Curves.easeOut),
+      ),
+    );
     _scale = Tween<double>(begin: 0.75, end: 1).animate(
-        CurvedAnimation(parent: _ctrl, curve: const Interval(0, 0.6, curve: Curves.easeOutBack)));
+      CurvedAnimation(
+        parent: _ctrl,
+        curve: const Interval(0, 0.6, curve: Curves.easeOutBack),
+      ),
+    );
     _ctrl.forward();
     _navigate();
   }
@@ -34,9 +44,9 @@ class _SplashPageState extends ConsumerState<SplashPage>
     await Future.delayed(const Duration(milliseconds: 1800));
     if (!mounted) return;
     final isAuth = ref.read(authProvider.notifier).isAuthenticated;
-    Navigator.of(context).pushReplacementNamed(
-      isAuth ? AppRoutes.dashboard : AppRoutes.login,
-    );
+    Navigator.of(
+      context,
+    ).pushReplacementNamed(isAuth ? AppRoutes.dashboard : AppRoutes.login);
   }
 
   @override
@@ -52,7 +62,7 @@ class _SplashPageState extends ConsumerState<SplashPage>
       body: Center(
         child: AnimatedBuilder(
           animation: _ctrl,
-          builder: (_, __) => FadeTransition(
+          builder: (_, _) => FadeTransition(
             opacity: _fade,
             child: ScaleTransition(
               scale: _scale,
@@ -63,35 +73,43 @@ class _SplashPageState extends ConsumerState<SplashPage>
                     width: 96,
                     height: 96,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.15),
+                      color: Colors.white.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(24),
                       border: Border.all(
-                          color: Colors.white.withOpacity(0.3), width: 2),
+                        color: Colors.white.withValues(alpha: 0.3),
+                        width: 2,
+                      ),
                     ),
-                    child: const Icon(Icons.support_agent_rounded,
-                        size: 52, color: Colors.white),
+                    child: const Icon(
+                      Icons.support_agent_rounded,
+                      size: 52,
+                      color: Colors.white,
+                    ),
                   ),
                   const SizedBox(height: 24),
                   const Text(
                     AppStrings.appName,
                     style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 38,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -1),
+                      color: Colors.white,
+                      fontSize: 38,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -1,
+                    ),
                   ),
                   const SizedBox(height: 6),
                   Text(
                     AppStrings.appTagline,
                     style: TextStyle(
-                        color: Colors.white.withOpacity(0.7), fontSize: 15),
+                      color: Colors.white.withValues(alpha: 0.7),
+                      fontSize: 15,
+                    ),
                   ),
                   const SizedBox(height: 64),
                   SizedBox(
                     width: 28,
                     height: 28,
                     child: CircularProgressIndicator(
-                      color: Colors.white.withOpacity(0.6),
+                      color: Colors.white.withValues(alpha: 0.6),
                       strokeWidth: 2.5,
                     ),
                   ),

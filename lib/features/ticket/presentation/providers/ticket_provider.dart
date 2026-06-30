@@ -3,45 +3,54 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:eticketing_helpdesk/core/constants/app_constants.dart';
 import 'package:eticketing_helpdesk/features/auth/presentation/providers/auth_provider.dart';
 import 'package:eticketing_helpdesk/features/ticket/data/models/ticket_model.dart';
+import 'package:eticketing_helpdesk/features/ticket/data/models/ticket_history_model.dart';
 import 'package:eticketing_helpdesk/features/ticket/data/repositories/ticket_repository.dart';
 
 // ─── Filter State ─────────────────────────────────────────────
 class TicketFilter {
-  final TicketStatus?   status;
+  final TicketStatus? status;
   final TicketPriority? priority;
-  final String          search;
+  final String search;
+  final String? assignedToId;
 
   const TicketFilter({
     this.status,
     this.priority,
     this.search = '',
+    this.assignedToId,
   });
 
   bool get hasFilter =>
-      status != null || priority != null || search.isNotEmpty;
+      status != null ||
+      priority != null ||
+      search.isNotEmpty ||
+      assignedToId != null;
 
   TicketFilter copyWith({
-    TicketStatus?   status,
+    TicketStatus? status,
     TicketPriority? priority,
-    String?         search,
-    bool clearStatus   = false,
+    String? search,
+    String? assignedToId,
+    bool clearStatus = false,
     bool clearPriority = false,
-  }) =>
-      TicketFilter(
-        status:   clearStatus   ? null : (status   ?? this.status),
-        priority: clearPriority ? null : (priority ?? this.priority),
-        search:   search ?? this.search,
-      );
+    bool clearAssignedTo = false,
+  }) => TicketFilter(
+    status: clearStatus ? null : (status ?? this.status),
+    priority: clearPriority ? null : (priority ?? this.priority),
+    search: search ?? this.search,
+    assignedToId: clearAssignedTo ? null : (assignedToId ?? this.assignedToId),
+  );
 }
 
 // ─── Filter Provider ──────────────────────────────────────────
 final ticketFilterProvider =
-    StateNotifierProvider<TicketFilterNotifier, TicketFilter>((ref) {
-  return TicketFilterNotifier();
-});
+    NotifierProvider<TicketFilterNotifier, TicketFilter>(
+      TicketFilterNotifier.new,
+    );
 
-class TicketFilterNotifier extends StateNotifier<TicketFilter> {
-  TicketFilterNotifier() : super(const TicketFilter());
+class TicketFilterNotifier extends Notifier<TicketFilter> {
+  @override
+  TicketFilter build() => const TicketFilter();
 
   void setStatus(TicketStatus? s) =>
       state = state.copyWith(status: s, clearStatus: s == null);
@@ -51,83 +60,79 @@ class TicketFilterNotifier extends StateNotifier<TicketFilter> {
 
   void setSearch(String q) => state = state.copyWith(search: q);
 
+  void setAssignedTo(String? id) =>
+      state = state.copyWith(assignedToId: id, clearAssignedTo: id == null);
+
   void clear() => state = const TicketFilter();
+}
+
+// ─── Helpdesk: Toggle filter tiket yang ditugaskan ────────────
+final helpdeskAssignedFilterProvider =
+    NotifierProvider<HelpdeskAssignedFilterNotifier, bool>(
+      HelpdeskAssignedFilterNotifier.new,
+    );
+
+class HelpdeskAssignedFilterNotifier extends Notifier<bool> {
+  @override
+  bool build() => true;
+
+  void updateState(bool value) => state = value;
 }
 
 // ─── Ticket List Provider ─────────────────────────────────────
 final ticketListProvider =
-    AsyncNotifierProvider.autoDispose<TicketListNotifier, List<TicketModel>>(
-        TicketListNotifier.new);
+    AsyncNotifierProvider<TicketListNotifier, List<TicketModel>>(
+      TicketListNotifier.new,
+    );
 
-class TicketListNotifier
-    extends AutoDisposeAsyncNotifier<List<TicketModel>> {
+class TicketListNotifier extends AsyncNotifier<List<TicketModel>> {
   @override
   Future<List<TicketModel>> build() async {
     // Re-fetch ketika filter berubah (watch)
     final filter = ref.watch(ticketFilterProvider);
-    final user   = ref.watch(authProvider).valueOrNull;
+    final user = ref.watch(authProvider).value;
+    final helpdeskOnlyAssigned = ref.watch(helpdeskAssignedFilterProvider);
 
-    final createdById =
-        user?.role == UserRole.user ? user?.id : null;
+    final createdById = user?.role == UserRole.user ? user?.id : null;
 
-    return ref.read(ticketRepositoryProvider).fetchTickets(
-          status:      filter.status,
-          priority:    filter.priority,
-          search:      filter.search.isNotEmpty ? filter.search : null,
+    // Helpdesk: default hanya lihat tiket yang ditugaskan kepadanya
+    String? assignedTo = filter.assignedToId;
+    if (user?.role == UserRole.helpdesk && helpdeskOnlyAssigned) {
+      assignedTo = user?.id;
+    }
+
+    return ref
+        .read(ticketRepositoryProvider)
+        .fetchTickets(
+          status: filter.status,
+          priority: filter.priority,
+          search: filter.search.isNotEmpty ? filter.search : null,
           createdById: createdById,
+          assignedToId: assignedTo,
         );
   }
 }
 
 // ─── Ticket Detail Provider ───────────────────────────────────
-final ticketDetailProvider = AsyncNotifierProvider.autoDispose
-    .family<TicketDetailNotifier, TicketModel, String>(
-        TicketDetailNotifier.new);
+final ticketDetailProvider = FutureProvider.family<TicketModel, String>((
+  ref,
+  id,
+) {
+  return ref.read(ticketRepositoryProvider).fetchTicketById(id);
+});
 
-class TicketDetailNotifier
-    extends AutoDisposeFamilyAsyncNotifier<TicketModel, String> {
-  @override
-  Future<TicketModel> build(String arg) async {
-    return ref.read(ticketRepositoryProvider).fetchTicketById(arg);
-  }
-
-  Future<void> refresh() async {
-    state = const AsyncLoading();
-    state = await AsyncValue.guard(
-        () => ref.read(ticketRepositoryProvider).fetchTicketById(arg));
-  }
-
-  Future<bool> addComment(String content, String authorId) async {
-    final comment = await ref.read(ticketRepositoryProvider).addComment(
-          ticketId: arg,
-          authorId: authorId,
-          content:  content,
-        );
-
-    // Update state lokal tanpa refetch
-    state = state.whenData((ticket) {
-      return ticket.copyWith(
-          comments: [...ticket.comments, comment]);
-    });
-
-    return true;
-  }
-
-  Future<void> updateStatus(TicketStatus newStatus) async {
-    await ref.read(ticketRepositoryProvider).updateStatus(arg, newStatus);
-    state = state.whenData(
-        (t) => t.copyWith(status: newStatus));
-    // Invalidate list supaya refresh
-    ref.invalidate(ticketListProvider);
-  }
-}
+// ─── Ticket History Provider ──────────────────────────────────
+final ticketHistoryProvider =
+    FutureProvider.family<List<TicketHistoryModel>, String>((ref, ticketId) {
+  return ref.read(ticketRepositoryProvider).fetchTicketHistory(ticketId);
+});
 
 // ─── Create Ticket Provider ───────────────────────────────────
-final createTicketProvider =
-    AsyncNotifierProvider.autoDispose<CreateTicketNotifier, void>(
-        CreateTicketNotifier.new);
+final createTicketProvider = AsyncNotifierProvider<CreateTicketNotifier, void>(
+  CreateTicketNotifier.new,
+);
 
-class CreateTicketNotifier extends AutoDisposeAsyncNotifier<void> {
+class CreateTicketNotifier extends AsyncNotifier<void> {
   @override
   Future<void> build() async {}
 
@@ -138,26 +143,28 @@ class CreateTicketNotifier extends AutoDisposeAsyncNotifier<void> {
     required String category,
     List<File> attachments = const [],
   }) async {
-    final user = ref.read(authProvider).valueOrNull;
+    final user = ref.read(authProvider).value;
     if (user == null) return false;
 
     state = const AsyncLoading();
 
     final result = await AsyncValue.guard(
-      () => ref.read(ticketRepositoryProvider).createTicket(
-            title:       title,
+      () => ref
+          .read(ticketRepositoryProvider)
+          .createTicket(
+            title: title,
             description: description,
-            priority:    priority,
-            category:    category,
+            priority: priority,
+            category: category,
             createdById: user.id,
             attachments: attachments,
           ),
     );
 
     state = result.when(
-      data:    (_) => const AsyncData(null),
-      loading: ()  => const AsyncLoading(),
-      error:   (e, s) => AsyncError(e, s),
+      data: (_) => const AsyncData(null),
+      loading: () => const AsyncLoading(),
+      error: (e, s) => AsyncError(e, s),
     );
 
     if (result.hasValue) {
@@ -170,22 +177,37 @@ class CreateTicketNotifier extends AutoDisposeAsyncNotifier<void> {
 
 // ─── Dashboard Stats Provider ─────────────────────────────────
 final dashboardStatsProvider = FutureProvider.autoDispose((ref) async {
-  final user = ref.watch(authProvider).valueOrNull;
-  final userId =
-      user?.role == UserRole.user ? user?.id : null;
-  return ref.read(ticketRepositoryProvider).fetchStats(userId: userId);
+  final user = ref.watch(authProvider).value;
+
+  // Role-based filtering:
+  // - User: hanya tiket milik sendiri (created_by)
+  // - Helpdesk: hanya tiket yang ditugaskan (assigned_to)
+  // - Admin: semua tiket
+  final userId = user?.role == UserRole.user ? user?.id : null;
+  final assignedToId = user?.role == UserRole.helpdesk ? user?.id : null;
+
+  return ref.read(ticketRepositoryProvider).fetchStats(
+    userId: userId,
+    assignedToId: assignedToId,
+  );
 });
 
 // ─── Recent Tickets (dashboard) ───────────────────────────────
-final recentTicketsProvider =
-    FutureProvider.autoDispose<List<TicketModel>>((ref) async {
-  final user = ref.watch(authProvider).valueOrNull;
-  final userId =
-      user?.role == UserRole.user ? user?.id : null;
+final recentTicketsProvider = FutureProvider.autoDispose<List<TicketModel>>((
+  ref,
+) async {
+  final user = ref.watch(authProvider).value;
+
+  // Role-based filtering:
+  // - User: hanya tiket milik sendiri (created_by)
+  // - Helpdesk: hanya tiket yang ditugaskan (assigned_to)
+  // - Admin: semua tiket
+  final createdById = user?.role == UserRole.user ? user?.id : null;
+  final assignedToId = user?.role == UserRole.helpdesk ? user?.id : null;
 
   final all = await ref
       .read(ticketRepositoryProvider)
-      .fetchTickets(createdById: userId);
+      .fetchTickets(createdById: createdById, assignedToId: assignedToId);
 
   return all.take(5).toList();
 });

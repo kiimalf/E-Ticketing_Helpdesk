@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:eticketing_helpdesk/core/constants/app_constants.dart';
 import 'package:eticketing_helpdesk/core/theme/app_theme.dart';
-import 'package:eticketing_helpdesk/core/widgets/app_widgets.dart';
+
 import 'package:eticketing_helpdesk/features/auth/data/repositories/auth_repository.dart';
 import 'package:eticketing_helpdesk/features/auth/presentation/providers/auth_provider.dart';
 import 'package:eticketing_helpdesk/features/ticket/presentation/providers/ticket_provider.dart';
@@ -25,8 +25,9 @@ class ProfilePage extends ConsumerWidget {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                minimumSize: const Size(80, 40)),
+              backgroundColor: Colors.red,
+              minimumSize: const Size(80, 40),
+            ),
             onPressed: () async {
               Navigator.pop(ctx);
               await ref.read(authProvider.notifier).signOut();
@@ -43,7 +44,10 @@ class ProfilePage extends ConsumerWidget {
 
   // ─── Dialog reset password ────────────────────────────────
   void _showResetPasswordDialog(
-      BuildContext context, WidgetRef ref, String email) {
+    BuildContext context,
+    WidgetRef ref,
+    String email,
+  ) {
     showDialog(
       context: context,
       builder: (ctx) => _ResetPasswordDialog(email: email),
@@ -52,15 +56,11 @@ class ProfilePage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme      = Theme.of(context);
-    final user       = ref.watch(authProvider).valueOrNull;
-    final isDark     = ref.watch(themeProvider);
+    final user = ref.watch(authProvider).value;
     final statsAsync = ref.watch(dashboardStatsProvider);
 
     if (user == null) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     final initials = user.name
@@ -76,7 +76,6 @@ class ProfilePage extends ConsumerWidget {
       body: SingleChildScrollView(
         child: Column(
           children: [
-
             // ── Header Profil ──────────────────────────────
             Container(
               width: double.infinity,
@@ -93,18 +92,19 @@ class ProfilePage extends ConsumerWidget {
                   // Avatar
                   CircleAvatar(
                     radius: 46,
-                    backgroundColor: Colors.white.withOpacity(0.2),
+                    backgroundColor: Colors.white.withValues(alpha: 0.2),
                     backgroundImage:
                         (user.avatarUrl != null && user.avatarUrl!.isNotEmpty)
-                            ? NetworkImage(user.avatarUrl!)
-                            : null,
+                        ? NetworkImage(user.avatarUrl!)
+                        : null,
                     child: (user.avatarUrl == null || user.avatarUrl!.isEmpty)
                         ? Text(
                             initials,
                             style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 32,
-                                fontWeight: FontWeight.w800),
+                              color: Colors.white,
+                              fontSize: 32,
+                              fontWeight: FontWeight.w800,
+                            ),
                           )
                         : null,
                   ),
@@ -114,9 +114,10 @@ class ProfilePage extends ConsumerWidget {
                   Text(
                     user.name,
                     style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w700),
+                      color: Colors.white,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w700,
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -126,7 +127,9 @@ class ProfilePage extends ConsumerWidget {
                   Text(
                     user.email,
                     style: TextStyle(
-                        color: Colors.white.withOpacity(0.75), fontSize: 13),
+                      color: Colors.white.withValues(alpha: 0.75),
+                      fontSize: 13,
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -135,17 +138,20 @@ class ProfilePage extends ConsumerWidget {
                   // Role badge
                   Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 5),
+                      horizontal: 14,
+                      vertical: 5,
+                    ),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
                       user.role.label,
                       style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600),
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
 
@@ -156,8 +162,9 @@ class ProfilePage extends ConsumerWidget {
                     Text(
                       user.department!,
                       style: TextStyle(
-                          color: Colors.white.withOpacity(0.65),
-                          fontSize: 12),
+                        color: Colors.white.withValues(alpha: 0.65),
+                        fontSize: 12,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -172,11 +179,11 @@ class ProfilePage extends ConsumerWidget {
                 padding: const EdgeInsets.symmetric(vertical: 20),
                 child: Row(
                   children: [
-                    _statItem(context, '${s.total}',    'Total'),
+                    _statItem(context, '${s.total}', 'Total'),
                     _divLine(),
-                    _statItem(context, '${s.open}',     'Open'),
+                    _statItem(context, '${s.open}', 'Open'),
                     _divLine(),
-                    _statItem(context, '${s.resolved}', 'Resolved'),
+                    _statItem(context, '${s.closed}', 'Closed'),
                   ],
                 ),
               ),
@@ -189,28 +196,12 @@ class ProfilePage extends ConsumerWidget {
             // ── SEKSI: Pengaturan ──────────────────────────
             _sectionLabel(context, 'Pengaturan'),
 
-            // Dark mode toggle
-            SwitchListTile(
-              value: isDark,
-              onChanged: (_) => ref.read(themeProvider.notifier).toggle(),
-              secondary: _tileIcon(
-                isDark
-                    ? Icons.light_mode_rounded
-                    : Icons.dark_mode_rounded,
-              ),
-              title: const Text('Mode Tampilan'),
-              subtitle: Text(isDark ? 'Mode Gelap' : 'Mode Terang'),
-              activeColor: AppColors.primary,
-            ),
-
-            const Divider(height: 1, indent: 56),
-
             _settingTile(
               context,
-              icon: Icons.notifications_outlined,
-              title: 'Notifikasi',
-              sub: 'Kelola preferensi notifikasi',
-              onTap: () {}, // TODO: navigate ke halaman notif settings
+              icon: Icons.settings_outlined,
+              title: 'Pengaturan',
+              sub: 'Tampilan, notifikasi, dan tentang aplikasi',
+              onTap: () => Navigator.pushNamed(context, AppRoutes.settings),
             ),
 
             const SizedBox(height: 8),
@@ -219,6 +210,17 @@ class ProfilePage extends ConsumerWidget {
             // ── SEKSI: Akun ────────────────────────────────
             _sectionLabel(context, 'Akun'),
 
+            if (user.role == UserRole.admin) ...[
+              _settingTile(
+                context,
+                icon: Icons.manage_accounts_outlined,
+                title: 'Manajemen Pengguna',
+                sub: 'Kelola data admin, helpdesk, dan user',
+                onTap: () => Navigator.pushNamed(context, AppRoutes.users),
+              ),
+              const Divider(height: 1, indent: 56),
+            ],
+
             // ── Reset Password ────────────────
             _settingTile(
               context,
@@ -226,21 +228,6 @@ class ProfilePage extends ConsumerWidget {
               title: 'Reset Password',
               sub: 'Kirim link reset ke email Anda',
               onTap: () => _showResetPasswordDialog(context, ref, user.email),
-            ),
-
-            const Divider(height: 1, indent: 56),
-
-            _settingTile(
-              context,
-              icon: Icons.info_outline_rounded,
-              title: 'Tentang Aplikasi',
-              sub: '${AppStrings.appName} ${AppStrings.appVersion}',
-              onTap: () => showAboutDialog(
-                context: context,
-                applicationName: AppStrings.appName,
-                applicationVersion: AppStrings.appVersion,
-                applicationLegalese: '© 2026 ${AppStrings.university}',
-              ),
             ),
 
             const SizedBox(height: 16),
@@ -253,10 +240,13 @@ class ProfilePage extends ConsumerWidget {
               child: OutlinedButton.icon(
                 onPressed: () => _showLogoutDialog(context, ref),
                 icon: const Icon(Icons.logout_rounded, color: Colors.red),
-                label: const Text('Keluar',
-                    style: TextStyle(color: Colors.red)),
+                label: const Text(
+                  'Keluar',
+                  style: TextStyle(color: Colors.red),
+                ),
                 style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Colors.red)),
+                  side: const BorderSide(color: Colors.red),
+                ),
               ),
             ),
           ],
@@ -275,9 +265,9 @@ class ProfilePage extends ConsumerWidget {
           Text(
             val,
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.w800,
-                ),
+              color: AppColors.primary,
+              fontWeight: FontWeight.w800,
+            ),
           ),
           const SizedBox(height: 4),
           Text(label, style: Theme.of(context).textTheme.bodySmall),
@@ -286,28 +276,33 @@ class ProfilePage extends ConsumerWidget {
     );
   }
 
-  Widget _divLine() =>
-      Container(height: 36, width: 1, color: Colors.grey.withOpacity(0.25));
+  Widget _divLine() => Container(
+    height: 36,
+    width: 1,
+    color: Colors.grey.withValues(alpha: 0.25),
+  );
 
   Widget _sectionLabel(BuildContext context, String title) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-        child: Text(
-          title.toUpperCase(),
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.8,
-                fontSize: 11,
-              ),
-        ),
-      );
+    padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+    child: Text(
+      title.toUpperCase(),
+      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+        fontWeight: FontWeight.w700,
+        letterSpacing: 0.8,
+        fontSize: 11,
+      ),
+    ),
+  );
 
   Widget _tileIcon(IconData icon) => Container(
-        width: 40, height: 40,
-        decoration: BoxDecoration(
-            color: AppColors.primary.withOpacity(0.08),
-            borderRadius: BorderRadius.circular(10)),
-        child: Icon(icon, color: AppColors.primary, size: 20),
-      );
+    width: 40,
+    height: 40,
+    decoration: BoxDecoration(
+      color: AppColors.primary.withValues(alpha: 0.08),
+      borderRadius: BorderRadius.circular(10),
+    ),
+    child: Icon(icon, color: AppColors.primary, size: 20),
+  );
 
   Widget _settingTile(
     BuildContext context, {
@@ -315,22 +310,24 @@ class ProfilePage extends ConsumerWidget {
     required String title,
     required String sub,
     VoidCallback? onTap,
-  }) =>
-      ListTile(
-        leading: _tileIcon(icon),
-        title: Text(title,
-            style: Theme.of(context).textTheme.titleSmall,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis),
-        subtitle: Text(sub,
-            style: Theme.of(context).textTheme.bodySmall,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis),
-        trailing: const Icon(Icons.chevron_right_rounded),
-        onTap: onTap,
-      );
+  }) => ListTile(
+    leading: _tileIcon(icon),
+    title: Text(
+      title,
+      style: Theme.of(context).textTheme.titleSmall,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+    ),
+    subtitle: Text(
+      sub,
+      style: Theme.of(context).textTheme.bodySmall,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+    ),
+    trailing: const Icon(Icons.chevron_right_rounded),
+    onTap: onTap,
+  );
 }
-
 
 class _ResetPasswordDialog extends ConsumerStatefulWidget {
   const _ResetPasswordDialog({required this.email});
@@ -343,7 +340,7 @@ class _ResetPasswordDialog extends ConsumerStatefulWidget {
 
 class _ResetPasswordDialogState extends ConsumerState<_ResetPasswordDialog> {
   bool _loading = false;
-  bool _sent    = false;
+  bool _sent = false;
 
   Future<void> _sendReset() async {
     if (_loading) return;
@@ -355,28 +352,36 @@ class _ResetPasswordDialogState extends ConsumerState<_ResetPasswordDialog> {
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _sent    = true;
+        _sent = true;
       });
     } on AppException catch (e) {
       if (!mounted) return;
       setState(() => _loading = false);
       Navigator.of(context).pop();
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(e.message),
-        backgroundColor: Colors.red.shade700,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.message),
+          backgroundColor: Colors.red.shade700,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      );
     } catch (e) {
       if (!mounted) return;
       setState(() => _loading = false);
       Navigator.of(context).pop();
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: const Text('Gagal mengirim email. Coba lagi.'),
-        backgroundColor: Colors.red.shade700,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Gagal mengirim email. Coba lagi.'),
+          backgroundColor: Colors.red.shade700,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      );
     }
   }
 
@@ -395,16 +400,21 @@ class _ResetPasswordDialogState extends ConsumerState<_ResetPasswordDialog> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppColors.statusResolved.withOpacity(0.1),
+                color: AppColors.statusResolved.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.mark_email_read_rounded,
-                  size: 48, color: AppColors.statusResolved),
+              child: const Icon(
+                Icons.mark_email_read_rounded,
+                size: 48,
+                color: AppColors.statusResolved,
+              ),
             ),
             const SizedBox(height: 16),
-            Text('Email Terkirim!',
-                style: theme.textTheme.titleLarge,
-                textAlign: TextAlign.center),
+            Text(
+              'Email Terkirim!',
+              style: theme.textTheme.titleLarge,
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: 8),
             Text(
               'Link reset password telah dikirim ke:\n${widget.email}\n\n'
@@ -435,16 +445,22 @@ class _ResetPasswordDialogState extends ConsumerState<_ResetPasswordDialog> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.1),
+              color: AppColors.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Icon(Icons.lock_reset_rounded,
-                color: AppColors.primary, size: 20),
+            child: const Icon(
+              Icons.lock_reset_rounded,
+              color: AppColors.primary,
+              size: 20,
+            ),
           ),
           const SizedBox(width: 12),
           const Expanded(
-            child: Text('Reset Password',
-                maxLines: 1, overflow: TextOverflow.ellipsis),
+            child: Text(
+              'Reset Password',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
         ],
       ),
@@ -461,14 +477,18 @@ class _ResetPasswordDialogState extends ConsumerState<_ResetPasswordDialog> {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.06),
+              color: AppColors.primary.withValues(alpha: 0.06),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+              border: Border.all(
+                color: AppColors.primary.withValues(alpha: 0.2),
+              ),
             ),
             child: Text(
               widget.email,
               style: theme.textTheme.bodyMedium?.copyWith(
-                  color: AppColors.primary, fontWeight: FontWeight.w600),
+                color: AppColors.primary,
+                fontWeight: FontWeight.w600,
+              ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -490,9 +510,13 @@ class _ResetPasswordDialogState extends ConsumerState<_ResetPasswordDialog> {
           style: ElevatedButton.styleFrom(minimumSize: const Size(100, 40)),
           child: _loading
               ? const SizedBox(
-                  width: 18, height: 18,
+                  width: 18,
+                  height: 18,
                   child: CircularProgressIndicator(
-                      color: Colors.white, strokeWidth: 2.5))
+                    color: Colors.white,
+                    strokeWidth: 2.5,
+                  ),
+                )
               : const Text('Kirim'),
         ),
       ],

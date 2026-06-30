@@ -8,15 +8,14 @@ class ForgotPasswordPage extends ConsumerStatefulWidget {
   const ForgotPasswordPage({super.key});
 
   @override
-  ConsumerState<ForgotPasswordPage> createState() =>
-      _ForgotPasswordPageState();
+  ConsumerState<ForgotPasswordPage> createState() => _ForgotPasswordPageState();
 }
 
 class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
-  final _formKey   = GlobalKey<FormState>();
+  final _formKey = GlobalKey<FormState>();
   final _emailCtrl = TextEditingController();
-  bool _loading    = false;
-  bool _sent       = false;
+  bool _loading = false;
+  bool _sent = false;
 
   @override
   void dispose() {
@@ -34,11 +33,13 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
       if (mounted) setState(() => _sent = true);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(e.toString().replaceAll('Exception: ', '')),
-          backgroundColor: Colors.red.shade700,
-          behavior: SnackBarBehavior.floating,
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString().replaceAll('Exception: ', '')),
+            backgroundColor: Colors.red.shade700,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -67,11 +68,14 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.1),
+              color: AppColors.primary.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.lock_reset_rounded,
-                size: 40, color: AppColors.primary),
+            child: const Icon(
+              Icons.lock_reset_rounded,
+              size: 40,
+              color: AppColors.primary,
+            ),
           ),
           const SizedBox(height: 24),
           Text('Reset Password', style: theme.textTheme.headlineMedium),
@@ -116,11 +120,14 @@ class _ForgotPasswordPageState extends ConsumerState<ForgotPasswordPage> {
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: AppColors.statusResolved.withOpacity(0.1),
+              color: AppColors.statusResolved.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.mark_email_read_rounded,
-                size: 64, color: AppColors.statusResolved),
+            child: const Icon(
+              Icons.mark_email_read_rounded,
+              size: 64,
+              color: AppColors.statusResolved,
+            ),
           ),
           const SizedBox(height: 24),
           Text('Email Terkirim!', style: theme.textTheme.headlineMedium),

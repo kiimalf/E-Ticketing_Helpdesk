@@ -14,6 +14,10 @@ import 'package:eticketing_helpdesk/features/auth/presentation/pages/register_pa
 import 'package:eticketing_helpdesk/features/auth/presentation/pages/forgot_password_page.dart';
 import 'package:eticketing_helpdesk/features/ticket/presentation/pages/ticket_detail_page.dart';
 import 'package:eticketing_helpdesk/features/ticket/presentation/pages/create_ticket_page.dart';
+import 'package:eticketing_helpdesk/features/user/presentation/pages/user_list_page.dart';
+import 'package:eticketing_helpdesk/features/user/presentation/pages/user_form_page.dart';
+import 'package:eticketing_helpdesk/features/settings/presentation/pages/settings_page.dart';
+import 'package:eticketing_helpdesk/features/auth/data/models/user_model.dart';
 import 'package:eticketing_helpdesk/main_shell.dart';
 
 // ─────────────────────────────────────────────────────────────
@@ -46,13 +50,13 @@ class HelpdeskApp extends ConsumerWidget {
     final isDark = ref.watch(themeProvider);
 
     return MaterialApp(
-      title:                   AppStrings.appName,
+      title: AppStrings.appName,
       debugShowCheckedModeBanner: false,
-      theme:                   AppTheme.light,
-      darkTheme:               AppTheme.dark,
-      themeMode:               isDark ? ThemeMode.dark : ThemeMode.light,
-      initialRoute:            AppRoutes.splash,
-      onGenerateRoute:         _generateRoute,
+      theme: AppTheme.light,
+      darkTheme: AppTheme.dark,
+      themeMode: isDark ? ThemeMode.dark : ThemeMode.light,
+      initialRoute: AppRoutes.splash,
+      onGenerateRoute: _generateRoute,
     );
   }
 
@@ -81,23 +85,30 @@ class HelpdeskApp extends ConsumerWidget {
         break;
       case AppRoutes.ticketDetail:
         final id = settings.arguments as String?;
-        page = id != null
-            ? TicketDetailPage(ticketId: id)
-            : const MainShell();
+        page = id != null ? TicketDetailPage(ticketId: id) : const MainShell();
+        break;
+      case AppRoutes.settings:
+        page = const SettingsPage();
+        break;
+      case AppRoutes.users:
+        page = const UserListPage();
+        break;
+      case AppRoutes.userForm:
+        final user = settings.arguments as UserModel?;
+        page = UserFormPage(user: user);
         break;
       default:
         page = const SplashPage();
     }
 
     return PageRouteBuilder(
-      settings:     settings,
-      pageBuilder:  (_, __, ___) => page,
-      transitionsBuilder: (_, animation, __, child) => SlideTransition(
-        position: Tween<Offset>(
-          begin: const Offset(1, 0),
-          end:   Offset.zero,
-        ).animate(CurvedAnimation(
-            parent: animation, curve: Curves.easeOutCubic)),
+      settings: settings,
+      pageBuilder: (_, _, _) => page,
+      transitionsBuilder: (_, animation, _, child) => SlideTransition(
+        position: Tween<Offset>(begin: const Offset(1, 0), end: Offset.zero)
+            .animate(
+              CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
+            ),
         child: child,
       ),
       transitionDuration: const Duration(milliseconds: 260),

@@ -3,14 +3,15 @@ import 'package:eticketing_helpdesk/features/auth/presentation/providers/auth_pr
 import 'package:eticketing_helpdesk/features/notification/data/models/notification_model.dart';
 import 'package:eticketing_helpdesk/features/notification/data/repositories/notification_repository.dart';
 
-final notificationProvider = AsyncNotifierProvider.autoDispose<
-    NotificationNotifier, List<NotificationModel>>(NotificationNotifier.new);
+final notificationProvider =
+    AsyncNotifierProvider<NotificationNotifier, List<NotificationModel>>(
+      NotificationNotifier.new,
+    );
 
-class NotificationNotifier
-    extends AutoDisposeAsyncNotifier<List<NotificationModel>> {
+class NotificationNotifier extends AsyncNotifier<List<NotificationModel>> {
   @override
   Future<List<NotificationModel>> build() async {
-    final user = ref.watch(authProvider).valueOrNull;
+    final user = ref.watch(authProvider).value;
     if (user == null) return [];
     return ref.read(notificationRepositoryProvider).fetchAll(user.id);
   }
@@ -18,7 +19,7 @@ class NotificationNotifier
   Future<void> markAsRead(String id) async {
     await ref.read(notificationRepositoryProvider).markAsRead(id);
     state = AsyncData(
-      state.valueOrNull
+      state.value
               ?.map((n) => n.id == id ? n.copyWith(isRead: true) : n)
               .toList() ??
           [],
@@ -26,22 +27,21 @@ class NotificationNotifier
   }
 
   Future<void> markAllAsRead() async {
-    final user = ref.read(authProvider).valueOrNull;
+    final user = ref.read(authProvider).value;
     if (user == null) return;
     await ref.read(notificationRepositoryProvider).markAllAsRead(user.id);
     state = AsyncData(
-      state.valueOrNull?.map((n) => n.copyWith(isRead: true)).toList() ?? [],
+      state.value?.map((n) => n.copyWith(isRead: true)).toList() ?? [],
     );
   }
 
-  int get unreadCount =>
-      state.valueOrNull?.where((n) => !n.isRead).length ?? 0;
+  int get unreadCount => state.value?.where((n) => !n.isRead).length ?? 0;
 }
 
-final unreadCountProvider = Provider.autoDispose<int>((ref) {
+final unreadCountProvider = Provider<int>((ref) {
   return ref
           .watch(notificationProvider)
-          .valueOrNull
+          .value
           ?.where((n) => !n.isRead)
           .length ??
       0;

@@ -13,10 +13,10 @@ class LoginPage extends ConsumerStatefulWidget {
 }
 
 class _LoginPageState extends ConsumerState<LoginPage> {
-  final _formKey      = GlobalKey<FormState>();
-  final _emailCtrl    = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+  final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
-  bool _obscure       = true;
+  bool _obscure = true;
 
   @override
   void dispose() {
@@ -28,14 +28,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   Future<void> _onSubmit() async {
     if (!_formKey.currentState!.validate()) return;
 
-    await ref.read(authProvider.notifier).signIn(
-          email:    _emailCtrl.text.trim(),
-          password: _passwordCtrl.text,
-        );
+    await ref
+        .read(authProvider.notifier)
+        .signIn(email: _emailCtrl.text.trim(), password: _passwordCtrl.text);
 
     if (!mounted) return;
 
-    final notifier  = ref.read(authProvider.notifier);
+    final notifier = ref.read(authProvider.notifier);
     final authState = ref.read(authProvider);
 
     authState.when(
@@ -44,7 +43,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           Navigator.of(context).pushReplacementNamed(AppRoutes.dashboard);
         }
       },
-      error: (_, __) {
+      error: (_, _) {
         _showSnack(
           notifier.errorMessage ?? 'Login gagal. Coba lagi.',
           isInfo: notifier.isInfoMessage,
@@ -56,20 +55,22 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
   void _showSnack(String msg, {bool isInfo = false}) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(msg),
-      backgroundColor: isInfo
-          ? AppColors.statusInProgress
-          : Colors.red.shade700,
-      behavior: SnackBarBehavior.floating,
-      duration: Duration(seconds: isInfo ? 5 : 4),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-    ));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: isInfo
+            ? AppColors.statusInProgress
+            : Colors.red.shade700,
+        behavior: SnackBarBehavior.floating,
+        duration: Duration(seconds: isInfo ? 5 : 4),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme     = Theme.of(context);
+    final theme = Theme.of(context);
     final isLoading = ref.watch(authProvider).isLoading;
 
     return Scaffold(
@@ -83,20 +84,25 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               children: [
                 const SizedBox(height: 24),
                 Container(
-                  width: 60, height: 60,
+                  width: 60,
+                  height: 60,
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
+                    color: AppColors.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  child: const Icon(Icons.support_agent_rounded,
-                      size: 34, color: AppColors.primary),
+                  child: const Icon(
+                    Icons.support_agent_rounded,
+                    size: 34,
+                    color: AppColors.primary,
+                  ),
                 ),
                 const SizedBox(height: 24),
-                Text('Selamat Datang!',
-                    style: theme.textTheme.headlineMedium),
+                Text('Selamat Datang!', style: theme.textTheme.headlineMedium),
                 const SizedBox(height: 6),
-                Text('Masuk ke akun HelpDesk Anda',
-                    style: theme.textTheme.bodyMedium),
+                Text(
+                  'Masuk ke akun HelpDesk Anda',
+                  style: theme.textTheme.bodyMedium,
+                ),
                 const SizedBox(height: 36),
 
                 // Email
@@ -109,7 +115,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     prefixIcon: Icon(Icons.email_outlined),
                   ),
                   validator: (v) {
-                    if (v == null || v.trim().isEmpty) return 'Email wajib diisi';
+                    if (v == null || v.trim().isEmpty) {
+                      return 'Email wajib diisi';
+                    }
                     if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(v.trim())) {
                       return 'Format email tidak valid';
                     }
@@ -126,11 +134,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     labelText: 'Password',
                     prefixIcon: const Icon(Icons.lock_outline_rounded),
                     suffixIcon: IconButton(
-                      icon: Icon(_obscure
-                          ? Icons.visibility_outlined
-                          : Icons.visibility_off_outlined),
-                      onPressed: () =>
-                          setState(() => _obscure = !_obscure),
+                      icon: Icon(
+                        _obscure
+                            ? Icons.visibility_outlined
+                            : Icons.visibility_off_outlined,
+                      ),
+                      onPressed: () => setState(() => _obscure = !_obscure),
                     ),
                   ),
                   validator: (v) {
@@ -152,7 +161,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 const SizedBox(height: 20),
 
                 LoadingButton(
-                  label:     'Masuk',
+                  label: 'Masuk',
                   isLoading: isLoading,
                   onPressed: _onSubmit,
                 ),
@@ -161,13 +170,17 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text('Belum punya akun?',
-                        style: theme.textTheme.bodyMedium),
+                    Text(
+                      'Belum punya akun?',
+                      style: theme.textTheme.bodyMedium,
+                    ),
                     TextButton(
                       onPressed: isLoading
                           ? null
                           : () => Navigator.pushNamed(
-                              context, AppRoutes.register),
+                              context,
+                              AppRoutes.register,
+                            ),
                       child: const Text('Daftar'),
                     ),
                   ],

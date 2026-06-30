@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:eticketing_helpdesk/core/constants/app_constants.dart';
 import 'package:eticketing_helpdesk/core/theme/app_theme.dart';
 import 'package:eticketing_helpdesk/core/widgets/app_widgets.dart';
-import 'package:eticketing_helpdesk/features/notification/data/models/notification_model.dart';
+
 import 'package:eticketing_helpdesk/features/notification/presentation/providers/notification_provider.dart';
 import 'package:eticketing_helpdesk/features/ticket/presentation/pages/ticket_detail_page.dart';
 import 'package:intl/intl.dart';
@@ -12,32 +12,32 @@ class NotificationPage extends ConsumerWidget {
   const NotificationPage({super.key});
 
   IconData _icon(NotificationType t) => switch (t) {
-        NotificationType.ticketCreated  => Icons.add_circle_outline_rounded,
-        NotificationType.statusUpdated  => Icons.sync_rounded,
-        NotificationType.newComment     => Icons.chat_bubble_outline_rounded,
-        NotificationType.ticketAssigned => Icons.assignment_ind_outlined,
-      };
+    NotificationType.ticketCreated => Icons.add_circle_outline_rounded,
+    NotificationType.statusUpdated => Icons.sync_rounded,
+    NotificationType.newComment => Icons.chat_bubble_outline_rounded,
+    NotificationType.ticketAssigned => Icons.assignment_ind_outlined,
+  };
 
   Color _color(NotificationType t) => switch (t) {
-        NotificationType.ticketCreated  => AppColors.statusResolved,
-        NotificationType.statusUpdated  => AppColors.statusInProgress,
-        NotificationType.newComment     => AppColors.primary,
-        NotificationType.ticketAssigned => AppColors.priorityCritical,
-      };
+    NotificationType.ticketCreated => AppColors.statusResolved,
+    NotificationType.statusUpdated => AppColors.statusInProgress,
+    NotificationType.newComment => AppColors.primary,
+    NotificationType.ticketAssigned => AppColors.priorityCritical,
+  };
 
   String _ago(DateTime d) {
     final diff = DateTime.now().difference(d);
     if (diff.inMinutes < 60) return '${diff.inMinutes} menit lalu';
-    if (diff.inHours < 24)   return '${diff.inHours} jam lalu';
-    if (diff.inDays < 7)     return '${diff.inDays} hari lalu';
+    if (diff.inHours < 24) return '${diff.inHours} jam lalu';
+    if (diff.inDays < 7) return '${diff.inDays} hari lalu';
     return DateFormat('dd MMM yyyy').format(d);
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme      = Theme.of(context);
+    final theme = Theme.of(context);
     final notifAsync = ref.watch(notificationProvider);
-    final notifier   = ref.read(notificationProvider.notifier);
+    final notifier = ref.read(notificationProvider.notifier);
 
     return Scaffold(
       appBar: AppBar(
@@ -69,10 +69,10 @@ class NotificationPage extends ConsumerWidget {
             : ListView.separated(
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 itemCount: list.length,
-                separatorBuilder: (_, __) =>
+                separatorBuilder: (_, _) =>
                     const Divider(height: 1, indent: 72),
                 itemBuilder: (_, i) {
-                  final n     = list[i];
+                  final n = list[i];
                   final color = _color(n.type);
 
                   return InkWell(
@@ -91,26 +91,27 @@ class NotificationPage extends ConsumerWidget {
                     child: Container(
                       color: n.isRead
                           ? Colors.transparent
-                          : AppColors.primary.withOpacity(0.04),
+                          : AppColors.primary.withValues(alpha: 0.04),
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 14),
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Container(
-                            width: 44, height: 44,
+                            width: 44,
+                            height: 44,
                             decoration: BoxDecoration(
-                              color: color.withOpacity(0.12),
+                              color: color.withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: Icon(_icon(n.type),
-                                color: color, size: 22),
+                            child: Icon(_icon(n.type), color: color, size: 22),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: Column(
-                              crossAxisAlignment:
-                                  CrossAxisAlignment.start,
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Row(
                                   children: [
@@ -119,27 +120,30 @@ class NotificationPage extends ConsumerWidget {
                                         n.title,
                                         style: theme.textTheme.titleSmall
                                             ?.copyWith(
-                                          fontWeight: n.isRead
-                                              ? FontWeight.w500
-                                              : FontWeight.w700,
-                                        ),
+                                              fontWeight: n.isRead
+                                                  ? FontWeight.w500
+                                                  : FontWeight.w700,
+                                            ),
                                       ),
                                     ),
                                     if (!n.isRead)
                                       Container(
-                                        width: 8, height: 8,
+                                        width: 8,
+                                        height: 8,
                                         decoration: const BoxDecoration(
-                                            color: AppColors.primary,
-                                            shape: BoxShape.circle),
+                                          color: AppColors.primary,
+                                          shape: BoxShape.circle,
+                                        ),
                                       ),
                                   ],
                                 ),
                                 const SizedBox(height: 3),
-                                Text(n.body,
-                                    style: theme.textTheme.bodyMedium),
+                                Text(n.body, style: theme.textTheme.bodyMedium),
                                 const SizedBox(height: 5),
-                                Text(_ago(n.createdAt),
-                                    style: theme.textTheme.bodySmall),
+                                Text(
+                                  _ago(n.createdAt),
+                                  style: theme.textTheme.bodySmall,
+                                ),
                               ],
                             ),
                           ),

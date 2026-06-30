@@ -27,7 +27,6 @@ class TicketCardWidget extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-
               // ── Header: ticket number + priority ──────────
               Row(
                 children: [
