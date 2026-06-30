@@ -34,6 +34,7 @@ class SupabaseTables {
   static const String comments = 'ticket_comments';
   static const String attachments = 'ticket_attachments';
   static const String notifications = 'notifications';
+  static const String ticketHistory = 'ticket_history';
 }
 
 // ─── Supabase Storage Buckets ─────────────────────────────────

@@ -184,7 +184,7 @@ class ProfilePage extends ConsumerWidget {
                     _divLine(),
                     _statItem(context, '${s.open}', 'Open'),
                     _divLine(),
-                    _statItem(context, '${s.resolved}', 'Resolved'),
+                    _statItem(context, '${s.closed}', 'Closed'),
                   ],
                 ),
               ),

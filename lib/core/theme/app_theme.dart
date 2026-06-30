@@ -13,6 +13,7 @@ class AppColors {
   // Status
   static const Color statusOpen = Color(0xFFF59E0B);
   static const Color statusInProgress = Color(0xFF3B82F6);
+  static const Color statusAssigned = Color(0xFF8B5CF6);
   static const Color statusResolved = Color(0xFF10B981);
   static const Color statusClosed = Color(0xFF6B7280);
 
