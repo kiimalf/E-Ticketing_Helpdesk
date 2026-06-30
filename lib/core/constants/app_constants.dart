@@ -14,6 +14,7 @@ class AppRoutes {
   static const String notifications = '/notifications';
   static const String profile = '/profile';
   static const String history = '/history';
+  static const String settings = '/settings';
   static const String users = '/users';
   static const String userForm = '/user-form';
 }
