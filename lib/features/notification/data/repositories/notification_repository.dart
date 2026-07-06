@@ -17,6 +17,18 @@ class NotificationRepository {
         .toList();
   }
 
+  // ─── Stream notifikasi secara realtime ─────────────────────
+  Stream<List<NotificationModel>> streamAll(String userId) {
+    return SupabaseService.from(SupabaseTables.notifications)
+        .stream(primaryKey: ['id'])
+        .eq('user_id', userId)
+        .order('created_at', ascending: false)
+        .limit(50)
+        .map((data) => data
+            .map((m) => NotificationModel.fromMap(m))
+            .toList());
+  }
+
   // ─── Tandai satu notifikasi sebagai sudah dibaca ──────────
   Future<void> markAsRead(String notificationId) async {
     await SupabaseService.from(
