@@ -42,7 +42,8 @@ lib/
 │   ├── ticket/
 │   ├── dashboard/
 │   ├── notification/
-│   └── profile/
+│   ├── profile/
+│   └── settings/
 │
 └── main.dart
 ```
@@ -119,6 +120,7 @@ lib/
 | `ticket_comments` | Komentar pada tiket |
 | `ticket_attachments` | Lampiran tiket |
 | `notifications` | Notifikasi per user |
+| `ticket_history` | Riwayat aktivitas/perubahan tiket |
 
 ### Relasi
 
@@ -228,21 +230,6 @@ Menggunakan **Riverpod**:
 
 ---
 
-## 🐞 Known Issues
-
-- [ ] Overflow UI pada beberapa device layar kecil (sedang diperbaiki)
-- [ ] Upload file bisa gagal jika policy storage Supabase belum dikonfigurasi dengan benar
-- [ ] Email confirmation perlu disesuaikan (aktif/nonaktif) sesuai kebutuhan environment
-
----
-
 ## 👨‍💻 Author
 
-**Nabil Hakim Alfikri**  
-Mahasiswa D4 Teknik Informatika — Universitas Airlangga
-
----
-
-## 📜 Lisensi
-
-Project ini dibuat untuk keperluan **pembelajaran dan pengembangan akademik**.
+**Nabil Hakim Alfikri** - **434241055**
