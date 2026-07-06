@@ -31,21 +31,7 @@ class UserManagementNotifier extends AsyncNotifier<List<UserModel>> {
     state = await AsyncValue.guard(() => _fetchUsers());
   }
 
-  Future<void> createUser({
-    required String name,
-    required String email,
-    required UserRole role,
-    String? department,
-  }) async {
-    final repository = ref.read(userRepositoryProvider);
-    await repository.createUser(
-      name: name,
-      email: email,
-      role: role,
-      department: department,
-    );
-    await refresh();
-  }
+  // createUser method dihapus
 
   Future<void> updateUser({
     required String id,

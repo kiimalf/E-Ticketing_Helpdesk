@@ -94,7 +94,7 @@ class HelpdeskApp extends ConsumerWidget {
         page = const UserListPage();
         break;
       case AppRoutes.userForm:
-        final user = settings.arguments as UserModel?;
+        final user = settings.arguments as UserModel;
         page = UserFormPage(user: user);
         break;
       default:

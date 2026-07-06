@@ -25,47 +25,10 @@ class UserRepository {
     required UserRole role,
     String? department,
   }) async {
-    final now = DateTime.now().toIso8601String();
-
-    // 1. Create user in auth.users via REST API
-    final response = await http.post(
-      Uri.parse('${SupabaseConfig.url}/auth/v1/admin/users'),
-      headers: {
-        'apikey': SupabaseConfig.serviceRoleKey,
-        'Authorization': 'Bearer ${SupabaseConfig.serviceRoleKey}',
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode({
-        'email': email,
-        'password': 'Password123!',
-        'email_confirm': true,
-        'user_metadata': {'name': name},
-      }),
+    throw UnimplementedError(
+      'Fungsi Create User dari Admin dinonaktifkan demi keamanan. '
+      'Silakan minta pengguna mendaftar melalui halaman Register biasa.',
     );
-
-    if (response.statusCode >= 400) {
-      throw Exception('Gagal membuat user: ${response.body}');
-    }
-
-    final authRes = jsonDecode(response.body);
-    final newId = authRes['id'];
-
-    // 2. Insert into public.profiles (Aman karena ID sudah ada di auth.users)
-    final result = await SupabaseService.from(SupabaseTables.profiles)
-        .upsert({
-          'id': newId,
-          'name': name,
-          'email': email,
-          'role': role.name,
-          'department': department,
-          'created_at': now,
-          'updated_at': now,
-          'is_active': true,
-        })
-        .select()
-        .single();
-
-    return UserModel.fromMap(result);
   }
 
   // ─── Update User ──────────────────────────────────────────

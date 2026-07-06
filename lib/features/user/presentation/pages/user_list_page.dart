@@ -257,16 +257,7 @@ class _UserListPageState extends ConsumerState<UserListPage> {
           );
         },
       ),
-      floatingActionButton: FloatingActionButton(
-        heroTag: 'fab_users',
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const UserFormPage()),
-          );
-        },
-        child: const Icon(Icons.add),
-      ),
+      // FAB dihilangkan agar admin tidak bisa membuat akun baru dari sini
     );
   }
 

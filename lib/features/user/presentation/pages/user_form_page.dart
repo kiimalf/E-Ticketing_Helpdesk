@@ -5,9 +5,9 @@ import 'package:eticketing_helpdesk/features/auth/data/models/user_model.dart';
 import 'package:eticketing_helpdesk/features/user/presentation/providers/user_provider.dart';
 
 class UserFormPage extends ConsumerStatefulWidget {
-  final UserModel? user; // Jika null, mode tambah user
+  final UserModel user; // Wajib diisi karena hanya untuk edit
 
-  const UserFormPage({super.key, this.user});
+  const UserFormPage({super.key, required this.user});
 
   @override
   ConsumerState<UserFormPage> createState() => _UserFormPageState();
@@ -26,12 +26,12 @@ class _UserFormPageState extends ConsumerState<UserFormPage> {
   @override
   void initState() {
     super.initState();
-    _nameController = TextEditingController(text: widget.user?.name ?? '');
-    _emailController = TextEditingController(text: widget.user?.email ?? '');
+    _nameController = TextEditingController(text: widget.user.name);
+    _emailController = TextEditingController(text: widget.user.email);
     _departmentController = TextEditingController(
-      text: widget.user?.department ?? '',
+      text: widget.user.department ?? '',
     );
-    _selectedRole = widget.user?.role ?? UserRole.user;
+    _selectedRole = widget.user.role;
   }
 
   @override
@@ -52,35 +52,21 @@ class _UserFormPageState extends ConsumerState<UserFormPage> {
       final email = _emailController.text.trim();
       final department = _departmentController.text.trim();
 
-      if (widget.user == null) {
-        // Mode Buat Baru
-        await ref
-            .read(userManagementProvider.notifier)
-            .createUser(
-              name: name,
-              email: email,
-              role: _selectedRole,
-              department: department.isEmpty ? null : department,
-            );
-      } else {
-        // Mode Update
-        await ref
-            .read(userManagementProvider.notifier)
-            .updateUser(
-              id: widget.user!.id,
-              name: name,
-              role: _selectedRole,
-              department: department.isEmpty ? null : department,
-            );
-      }
+      // Mode Update (Create dihilangkan)
+      await ref
+          .read(userManagementProvider.notifier)
+          .updateUser(
+            id: widget.user.id,
+            name: name,
+            role: _selectedRole,
+            department: department.isEmpty ? null : department,
+          );
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              widget.user == null
-                  ? 'Pengguna berhasil ditambahkan'
-                  : 'Pengguna berhasil diperbarui',
+            content: const Text(
+              'Pengguna berhasil diperbarui',
             ),
           ),
         );
@@ -99,11 +85,9 @@ class _UserFormPageState extends ConsumerState<UserFormPage> {
 
   @override
   Widget build(BuildContext context) {
-    final isEditing = widget.user != null;
-
     return Scaffold(
       appBar: AppBar(
-        title: Text(isEditing ? 'Edit Pengguna' : 'Tambah Pengguna'),
+        title: const Text('Edit Pengguna'),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -127,16 +111,14 @@ class _UserFormPageState extends ConsumerState<UserFormPage> {
 
               TextFormField(
                 controller: _emailController,
-                enabled: !isEditing, // Jangan izinkan ubah email jika sudah ada
+                enabled: false, // Jangan izinkan ubah email
                 decoration: InputDecoration(
                   labelText: 'Email',
                   prefixIcon: const Icon(Icons.email),
                   border: const OutlineInputBorder(),
-                  filled: isEditing,
-                  fillColor: isEditing
-                      ? Colors.grey.withValues(alpha: 0.1)
-                      : null,
-                  helperText: isEditing ? 'Email tidak dapat diubah' : null,
+                  filled: true,
+                  fillColor: Colors.grey.withValues(alpha: 0.1),
+                  helperText: 'Email tidak dapat diubah',
                 ),
                 keyboardType: TextInputType.emailAddress,
                 validator: (value) {
@@ -191,7 +173,7 @@ class _UserFormPageState extends ConsumerState<UserFormPage> {
                           color: Colors.white,
                         ),
                       )
-                    : Text(isEditing ? 'Simpan Perubahan' : 'Tambah Pengguna'),
+                    : const Text('Simpan Perubahan'),
               ),
             ],
           ),
