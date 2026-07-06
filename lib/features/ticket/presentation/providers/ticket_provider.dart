@@ -1,4 +1,6 @@
-import 'dart:io';
+import 'package:image_picker/image_picker.dart';
+import 'dart:async';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:eticketing_helpdesk/core/constants/app_constants.dart';
 import 'package:eticketing_helpdesk/features/auth/presentation/providers/auth_provider.dart';
@@ -79,29 +81,26 @@ class HelpdeskAssignedFilterNotifier extends Notifier<bool> {
   void updateState(bool value) => state = value;
 }
 
-// ─── Ticket List Provider ─────────────────────────────────────
 final ticketListProvider =
-    AsyncNotifierProvider<TicketListNotifier, List<TicketModel>>(
+    StreamNotifierProvider<TicketListNotifier, List<TicketModel>>(
       TicketListNotifier.new,
     );
 
-class TicketListNotifier extends AsyncNotifier<List<TicketModel>> {
+class TicketListNotifier extends StreamNotifier<List<TicketModel>> {
   @override
-  Future<List<TicketModel>> build() async {
-    // Re-fetch ketika filter berubah (watch)
+  Stream<List<TicketModel>> build() async* {
     final filter = ref.watch(ticketFilterProvider);
     final user = ref.watch(authProvider).value;
     final helpdeskOnlyAssigned = ref.watch(helpdeskAssignedFilterProvider);
 
     final createdById = user?.role == UserRole.user ? user?.id : null;
 
-    // Helpdesk: default hanya lihat tiket yang ditugaskan kepadanya
     String? assignedTo = filter.assignedToId;
     if (user?.role == UserRole.helpdesk && helpdeskOnlyAssigned) {
       assignedTo = user?.id;
     }
 
-    return ref
+    Future<List<TicketModel>> fetchAll() => ref
         .read(ticketRepositoryProvider)
         .fetchTickets(
           status: filter.status,
@@ -110,6 +109,37 @@ class TicketListNotifier extends AsyncNotifier<List<TicketModel>> {
           createdById: createdById,
           assignedToId: assignedTo,
         );
+
+    // Yield initial data
+    yield await fetchAll();
+
+    // Setup Supabase Realtime listener untuk tabel tickets
+    final channel = Supabase.instance.client.channel('public:tickets:list');
+    
+    // Kita gunakan StreamController untuk mengubah callback menjadi stream
+    final StreamController<void> controller = StreamController<void>();
+
+    channel.onPostgresChanges(
+      event: PostgresChangeEvent.all,
+      schema: 'public',
+      table: 'tickets',
+      callback: (payload) {
+        if (!controller.isClosed) {
+          controller.add(null);
+        }
+      },
+    ).subscribe();
+
+    // Pastikan channel berhenti mendengarkan saat provider di-dispose
+    ref.onDispose(() {
+      Supabase.instance.client.removeChannel(channel);
+      controller.close();
+    });
+
+    // Setiap kali ada perubahan di tabel tickets, ambil ulang data
+    await for (final _ in controller.stream) {
+      yield await fetchAll();
+    }
   }
 }
 
@@ -141,7 +171,7 @@ class CreateTicketNotifier extends AsyncNotifier<void> {
     required String description,
     required TicketPriority priority,
     required String category,
-    List<File> attachments = const [],
+    List<XFile> attachments = const [],
   }) async {
     final user = ref.read(authProvider).value;
     if (user == null) return false;
@@ -168,15 +198,43 @@ class CreateTicketNotifier extends AsyncNotifier<void> {
     );
 
     if (result.hasValue) {
+      // Invalidate provider tiket agar me-refresh secara lokal tanpa menunggu websocket
       ref.invalidate(ticketListProvider);
+      ref.invalidate(dashboardStatsProvider);
+      ref.invalidate(recentTicketsProvider);
     }
 
     return result.hasValue;
   }
 }
 
+// ─── Shared Realtime Trigger ──────────────────────────────────
+final ticketRealtimeChangesProvider = StreamProvider.autoDispose<DateTime>((ref) {
+  final StreamController<DateTime> controller = StreamController<DateTime>();
+  final channel = Supabase.instance.client.channel('public:tickets:changes');
+
+  channel.onPostgresChanges(
+    event: PostgresChangeEvent.all,
+    schema: 'public',
+    table: 'tickets',
+    callback: (payload) {
+      if (!controller.isClosed) controller.add(DateTime.now());
+    },
+  ).subscribe();
+
+  ref.onDispose(() {
+    Supabase.instance.client.removeChannel(channel);
+    controller.close();
+  });
+
+  return controller.stream;
+});
+
 // ─── Dashboard Stats Provider ─────────────────────────────────
 final dashboardStatsProvider = FutureProvider.autoDispose((ref) async {
+  // Dengarkan perubahan realtime dari tabel tickets
+  ref.watch(ticketRealtimeChangesProvider);
+
   final user = ref.watch(authProvider).value;
 
   // Role-based filtering:
@@ -196,6 +254,9 @@ final dashboardStatsProvider = FutureProvider.autoDispose((ref) async {
 final recentTicketsProvider = FutureProvider.autoDispose<List<TicketModel>>((
   ref,
 ) async {
+  // Dengarkan perubahan realtime dari tabel tickets
+  ref.watch(ticketRealtimeChangesProvider);
+
   final user = ref.watch(authProvider).value;
 
   // Role-based filtering:
@@ -211,3 +272,4 @@ final recentTicketsProvider = FutureProvider.autoDispose<List<TicketModel>>((
 
   return all.take(5).toList();
 });
+

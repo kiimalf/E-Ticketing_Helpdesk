@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:image_picker/image_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 import 'package:uuid/uuid.dart';
@@ -82,7 +82,7 @@ class TicketRepository {
     required TicketPriority priority,
     required String category,
     required String createdById,
-    List<File> attachments = const [],
+    List<XFile> attachments = const [],
   }) async {
     // 1. Insert tiket
     final result = await SupabaseService.from(SupabaseTables.tickets)
@@ -215,16 +215,17 @@ class TicketRepository {
   // ─── Upload lampiran ke Supabase Storage ──────────────────
   Future<TicketAttachmentModel> uploadAttachment({
     required String ticketId,
-    required File file,
+    required XFile file,
     required String uploadedBy,
   }) async {
-    final ext = p.extension(file.path).toLowerCase();
+    final ext = p.extension(file.name).toLowerCase();
     final storagePath = 'tickets/$ticketId/${_uuid.v4()}$ext';
 
-    // Upload ke bucket
+    // Upload ke bucket menggunakan bytes agar support Web
+    final bytes = await file.readAsBytes();
     await SupabaseService.bucket(
       SupabaseBuckets.ticketAttachments,
-    ).upload(storagePath, file);
+    ).uploadBinary(storagePath, bytes);
 
     // Dapatkan public URL
     final fileUrl = SupabaseService.getPublicUrl(

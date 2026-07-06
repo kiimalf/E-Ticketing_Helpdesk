@@ -7,8 +7,7 @@ class SupabaseConfig {
 
   static const String url = 'https://duwspyezthyhixdtzztz.supabase.co';
 
-  static const String anonKey = 'YOUR_SUPABASE_ANON_KEY';
-  static const String serviceRoleKey = 'YOUR_SUPABASE_SERVICE_ROLE_KEY';
+  static const String anonKey = 'sb_publishable_Nzo8dWi0OYE7iEmKDEqb0A_1I6mahzU';
 }
 
 // ─── Service ──────────────────────────────────────────────────

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -23,7 +24,7 @@ class _CreateTicketPageState extends ConsumerState<CreateTicketPage> {
 
   TicketPriority _priority = TicketPriority.medium;
   String? _category;
-  final List<File> _attachments = [];
+  final List<XFile> _attachments = [];
 
   @override
   void dispose() {
@@ -38,7 +39,7 @@ class _CreateTicketPageState extends ConsumerState<CreateTicketPage> {
       source: ImageSource.camera,
       imageQuality: 80,
     );
-    if (xf != null) setState(() => _attachments.add(File(xf.path)));
+    if (xf != null) setState(() => _attachments.add(xf));
   }
 
   // ─── Pilih foto dari galeri ─────────────────────────────────
@@ -47,7 +48,7 @@ class _CreateTicketPageState extends ConsumerState<CreateTicketPage> {
       source: ImageSource.gallery,
       imageQuality: 80,
     );
-    if (xf != null) setState(() => _attachments.add(File(xf.path)));
+    if (xf != null) setState(() => _attachments.add(xf));
   }
 
   // ─── Pilih file (PDF, DOC, dll) ─────────────────────────────
@@ -56,9 +57,16 @@ class _CreateTicketPageState extends ConsumerState<CreateTicketPage> {
     final result = await FilePicker.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt'],
+      withData: kIsWeb,
     );
-    if (result?.files.single.path != null) {
-      setState(() => _attachments.add(File(result!.files.single.path!)));
+    if (result != null) {
+      if (kIsWeb && result.files.single.bytes != null) {
+        final pf = result.files.single;
+        final xf = XFile.fromData(pf.bytes!, name: pf.name);
+        setState(() => _attachments.add(xf));
+      } else if (result.files.single.path != null) {
+        setState(() => _attachments.add(XFile(result.files.single.path!)));
+      }
     }
   }
 
@@ -87,16 +95,17 @@ class _CreateTicketPageState extends ConsumerState<CreateTicketPage> {
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 16),
-            _attachOption(
-              icon: Icons.camera_alt_rounded,
-              color: AppColors.primary,
-              label: 'Ambil Foto (Kamera)',
-              sub: 'Foto langsung dari kamera',
-              onTap: () {
-                Navigator.pop(context);
-                _pickCamera();
-              },
-            ),
+            if (!kIsWeb && (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS))
+              _attachOption(
+                icon: Icons.camera_alt_rounded,
+                color: AppColors.primary,
+                label: 'Ambil Foto (Kamera)',
+                sub: 'Foto langsung dari kamera',
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickCamera();
+                },
+              ),
             _attachOption(
               icon: Icons.photo_library_rounded,
               color: AppColors.statusOpen,
@@ -354,7 +363,9 @@ class _CreateTicketPageState extends ConsumerState<CreateTicketPage> {
                               border: Border.all(color: theme.dividerColor),
                               image: isImg
                                   ? DecorationImage(
-                                      image: FileImage(file),
+                                      image: kIsWeb
+                                          ? NetworkImage(file.path) as ImageProvider
+                                          : FileImage(File(file.path)) as ImageProvider,
                                       fit: BoxFit.cover,
                                     )
                                   : null,

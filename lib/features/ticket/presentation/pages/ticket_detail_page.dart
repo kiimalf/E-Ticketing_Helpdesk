@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:intl/intl.dart';
 import 'package:eticketing_helpdesk/core/constants/app_constants.dart';
 import 'package:eticketing_helpdesk/core/theme/app_theme.dart';
@@ -51,66 +52,6 @@ class _TicketDetailPageState extends ConsumerState<TicketDetailPage> {
       ref.invalidate(ticketHistoryProvider(widget.ticketId));
       _commentCtrl.clear();
     }
-  }
-
-  void _showStatusSheet(TicketModel ticket) {
-    final user = ref.read(authProvider).value;
-    final isHelpdesk = user?.role == UserRole.helpdesk;
-
-    // Helpdesk hanya bisa update tiket yang ditugaskan kepadanya
-    if (isHelpdesk && ticket.assignedToId != user?.id) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Anda hanya bisa mengubah status tiket yang ditugaskan kepada Anda'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      return;
-    }
-
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Update Status', style: Theme.of(ctx).textTheme.titleLarge),
-            const SizedBox(height: 16),
-            ...TicketStatus.values.map(
-              (s) => RadioListTile<TicketStatus>(
-                value: s,
-                groupValue: ticket.status,
-                title: Text(s.label),
-                secondary: StatusBadge(status: s, small: true),
-                onChanged: (v) async {
-                  Navigator.pop(ctx);
-                  if (v != null) {
-                    final currentUser = ref.read(authProvider).value;
-                    await ref
-                        .read(ticketRepositoryProvider)
-                        .updateStatus(
-                          widget.ticketId,
-                          v,
-                          oldStatus: ticket.status,
-                          performedBy: currentUser?.id,
-                        );
-                    ref.invalidate(ticketDetailProvider(widget.ticketId));
-                    ref.invalidate(ticketHistoryProvider(widget.ticketId));
-                    ref.invalidate(ticketListProvider);
-                  }
-                },
-              ),
-            ),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
-    );
   }
 
   void _showAssignSheet(TicketModel ticket) {
@@ -364,27 +305,6 @@ class _TicketDetailPageState extends ConsumerState<TicketDetailPage> {
               ),
               orElse: () => const SizedBox.shrink(),
             ),
-          if (isStaff)
-            ticketAsync.maybeWhen(
-              data: (t) {
-                final isHelpdesk = user?.role == UserRole.helpdesk;
-                final isAssignedToMe = t.assignedToId == user?.id;
-                // Helpdesk: tampilkan icon berbeda jika tiket bukan miliknya
-                return IconButton(
-                  icon: Icon(
-                    Icons.edit_outlined,
-                    color: (isHelpdesk && !isAssignedToMe)
-                        ? Theme.of(context).disabledColor
-                        : null,
-                  ),
-                  tooltip: (isHelpdesk && !isAssignedToMe)
-                      ? 'Tiket ini tidak ditugaskan kepada Anda'
-                      : 'Update Status',
-                  onPressed: () => _showStatusSheet(t),
-                );
-              },
-              orElse: () => const SizedBox.shrink(),
-            ),
         ],
       ),
       body: ticketAsync.when(
@@ -414,6 +334,14 @@ class _TicketDetailPageState extends ConsumerState<TicketDetailPage> {
                     _buildTimeline(ticket),
                     const Divider(height: 32),
                     _buildHistorySection(),
+                    if (user?.role == UserRole.helpdesk &&
+                        ((ticket.status == TicketStatus.open &&
+                                ticket.assignedToId == null) ||
+                            (ticket.status == TicketStatus.inProgress &&
+                                ticket.assignedToId == user?.id))) ...[
+                      const Divider(height: 32),
+                      _buildHelpdeskAction(ticket, user),
+                    ],
                     const Divider(height: 32),
                     _buildCommentSection(ticket, user?.id ?? ''),
                     const SizedBox(height: 16),
@@ -516,29 +444,187 @@ class _TicketDetailPageState extends ConsumerState<TicketDetailPage> {
     );
   }
 
-  Widget _attachChip(TicketAttachmentModel a) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-    decoration: BoxDecoration(
-      color: AppColors.primary.withValues(alpha: 0.06),
-      borderRadius: BorderRadius.circular(8),
-      border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
-    ),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
+  Widget _attachChip(TicketAttachmentModel a) {
+    if (a.isImage) {
+      return GestureDetector(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => Scaffold(
+                appBar: AppBar(
+                  title: Text(a.fileName),
+                  backgroundColor: Colors.black,
+                  iconTheme: const IconThemeData(color: Colors.white),
+                  titleTextStyle: const TextStyle(color: Colors.white, fontSize: 16),
+                ),
+                backgroundColor: Colors.black,
+                body: Center(
+                  child: InteractiveViewer(
+                    child: CachedNetworkImage(
+                      imageUrl: a.fileUrl,
+                      fit: BoxFit.contain,
+                      placeholder: (context, url) => const CircularProgressIndicator(),
+                      errorWidget: (context, url, error) => const Icon(Icons.error, color: Colors.white),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+        child: Container(
+          width: 80,
+          height: 80,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+            image: DecorationImage(
+              image: CachedNetworkImageProvider(a.fileUrl),
+              fit: BoxFit.cover,
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.attach_file_rounded,
+            size: 16,
+            color: AppColors.primary,
+          ),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              a.fileName,
+              style: const TextStyle(fontSize: 12, color: AppColors.primary),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  Widget _buildHelpdeskAction(TicketModel ticket, UserModel? user) {
+    final isUnassignedOpen =
+        ticket.assignedToId == null && ticket.status == TicketStatus.open;
+    final isMyTicketInProgress =
+        ticket.assignedToId == user?.id && ticket.status == TicketStatus.inProgress;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Icon(
-          a.isImage ? Icons.image_outlined : Icons.attach_file_rounded,
-          size: 16,
-          color: AppColors.primary,
-        ),
-        const SizedBox(width: 6),
         Text(
-          a.fileName,
-          style: const TextStyle(fontSize: 12, color: AppColors.primary),
+          'Aksi Helpdesk',
+          style: Theme.of(context).textTheme.titleMedium,
         ),
+        const SizedBox(height: 12),
+        if (isUnassignedOpen)
+          ElevatedButton.icon(
+            onPressed: () async {
+              final messenger = ScaffoldMessenger.of(context);
+              if (user == null) return;
+              try {
+                await ref.read(ticketRepositoryProvider).assignTicket(
+                      widget.ticketId,
+                      user.id,
+                      assigneeName: user.name,
+                      performedBy: user.id,
+                    );
+                ref.invalidate(ticketDetailProvider(widget.ticketId));
+                ref.invalidate(ticketHistoryProvider(widget.ticketId));
+                ref.invalidate(ticketListProvider);
+                messenger.showSnackBar(
+                  const SnackBar(
+                    content: Text('Berhasil mengambil tiket'),
+                    backgroundColor: AppColors.statusAssigned,
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              } catch (e) {
+                messenger.showSnackBar(
+                  SnackBar(
+                    content: Text('Gagal mengambil tiket: $e'),
+                    backgroundColor: Colors.red,
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
+            },
+            icon: const Icon(Icons.back_hand_rounded),
+            label: const Text('Ambil Tiket (Self Assign)'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.statusAssigned,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              textStyle: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+        if (isMyTicketInProgress)
+          ElevatedButton.icon(
+            onPressed: () async {
+              final messenger = ScaffoldMessenger.of(context);
+              try {
+                await ref.read(ticketRepositoryProvider).updateStatus(
+                      widget.ticketId,
+                      TicketStatus.closed,
+                      oldStatus: ticket.status,
+                      performedBy: user?.id,
+                    );
+                ref.invalidate(ticketDetailProvider(widget.ticketId));
+                ref.invalidate(ticketHistoryProvider(widget.ticketId));
+                ref.invalidate(ticketListProvider);
+                messenger.showSnackBar(
+                  const SnackBar(
+                    content: Text('Tiket berhasil ditandai selesai'),
+                    backgroundColor: AppColors.statusResolved,
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              } catch (e) {
+                messenger.showSnackBar(
+                  SnackBar(
+                    content: Text('Gagal mengubah status: $e'),
+                    backgroundColor: Colors.red,
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
+            },
+            icon: const Icon(Icons.check_circle_outline_rounded),
+            label: const Text('Tandai Selesai / Finish'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.statusResolved,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              textStyle: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
       ],
-    ),
-  );
+    );
+  }
 
   Widget _buildTimeline(TicketModel ticket) {
     final theme = Theme.of(context);
